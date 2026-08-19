@@ -1,0 +1,12 @@
+.background--lunar-mist {
+  background:
+    radial-gradient(circle at 78% 21%, rgba(188, 207, 236, 0.28), transparent 13%),
+    radial-gradient(ellipse at 54% 52%, rgba(86, 108, 144, 0.25), transparent 38%),
+    linear-gradient(155deg, #080d18 0%, #1b2638 51%, #070a15 100%);
+}
+
+.background--lunar-mist .star-background__nebula {
+  background:
+    radial-gradient(ellipse at 66% 37%, rgba(184, 212, 245, 0.2), transparent 34%),
+    radial-gradient(ellipse at 31% 66%, rgba(92, 130, 181, 0.2), transparent 36%);
+}

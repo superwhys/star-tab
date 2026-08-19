@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { getBackgroundMotionProfile } from '../backgrounds'
 import { useBackground } from '../composables/useBackground'
 
 interface Star {
@@ -33,16 +34,6 @@ interface Meteor {
   opacity: number
 }
 
-interface MotionProfile {
-  starSpeed: number
-  dustSpeed: number
-  verticalRatio: number
-  direction: 1 | -1
-  twinkleSpeed: number
-  twinkleAmount: number
-  meteorInterval: number
-}
-
 const canvas = ref<HTMLCanvasElement>()
 const { currentBackground, shouldAnimate } = useBackground()
 const backgroundClass = computed(() => currentBackground.value?.className)
@@ -60,41 +51,6 @@ let pointerY = 0
 let targetPointerX = 0
 let targetPointerY = 0
 let lastMeteorAt = 0
-
-function getMotionProfile(): MotionProfile {
-  switch (currentBackground.value?.kind) {
-    case 'canvas-meteor':
-      return {
-        starSpeed: 11.5,
-        dustSpeed: 21,
-        verticalRatio: 0.42,
-        direction: -1,
-        twinkleSpeed: 2.25,
-        twinkleAmount: 0.34,
-        meteorInterval: 1850,
-      }
-    case 'ambient':
-      return {
-        starSpeed: 7.8,
-        dustSpeed: 15,
-        verticalRatio: 0.3,
-        direction: 1,
-        twinkleSpeed: 1.8,
-        twinkleAmount: 0.3,
-        meteorInterval: 5600,
-      }
-    default:
-      return {
-        starSpeed: 14.5,
-        dustSpeed: 26,
-        verticalRatio: 0.36,
-        direction: 1,
-        twinkleSpeed: 2.05,
-        twinkleAmount: 0.32,
-        meteorInterval: 4200,
-      }
-  }
-}
 
 function createStars() {
   const count = Math.min(230, Math.max(100, Math.round((width * height) / 9200)))
@@ -155,7 +111,7 @@ function drawStarField(time: number) {
   pointerY += (targetPointerY - pointerY) * 0.04
 
   const seconds = time / 1000
-  const profile = getMotionProfile()
+  const profile = getBackgroundMotionProfile(currentBackground.value?.id)
 
   dustParticles.forEach((particle) => {
     const waveX = animated ? Math.sin(seconds * 0.48 + particle.phase) * 22 * particle.depth : 0
@@ -219,7 +175,7 @@ function drawMeteors(time: number) {
   if (!context || !shouldAnimate.value) return
 
   const kind = currentBackground.value?.kind
-  const profile = getMotionProfile()
+  const profile = getBackgroundMotionProfile(currentBackground.value?.id)
   const maxMeteors = kind === 'canvas-meteor' ? 3 : 2
 
   if (time - lastMeteorAt > profile.meteorInterval && meteors.length < maxMeteors) {
@@ -292,13 +248,13 @@ function handleVisibility() {
 watch([() => currentBackground.value?.id, shouldAnimate], async () => {
   await nextTick()
   meteors = []
-  lastMeteorAt = performance.now() - getMotionProfile().meteorInterval + 900
+  lastMeteorAt = performance.now() - getBackgroundMotionProfile(currentBackground.value?.id).meteorInterval + 900
   resizeCanvas()
   restartAnimation()
 })
 
 onMounted(() => {
-  lastMeteorAt = performance.now() - getMotionProfile().meteorInterval + 900
+  lastMeteorAt = performance.now() - getBackgroundMotionProfile(currentBackground.value?.id).meteorInterval + 900
   resizeCanvas()
   restartAnimation()
   window.addEventListener('resize', resizeCanvas, { passive: true })

@@ -46,3 +46,6 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
 ]
 
 export const BACKGROUND_IDS = BACKGROUND_PRESETS.map((preset) => preset.id)
+
+export { getBackgroundMotionProfile } from './motionProfiles'
+export type { MotionProfile } from './motionProfiles'

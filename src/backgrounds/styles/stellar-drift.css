@@ -1,0 +1,12 @@
+.background--stellar-drift {
+  background:
+    radial-gradient(ellipse at 22% 32%, rgba(53, 70, 150, 0.34), transparent 29%),
+    radial-gradient(ellipse at 72% 12%, rgba(70, 55, 143, 0.22), transparent 31%),
+    linear-gradient(145deg, #07091d 0%, #0a0e2a 46%, #06081d 100%);
+}
+
+.background--stellar-drift .star-background__nebula {
+  background:
+    radial-gradient(ellipse at 16% 44%, rgba(75, 97, 188, 0.18), transparent 24%),
+    radial-gradient(ellipse at 78% 76%, rgba(45, 52, 131, 0.16), transparent 24%);
+}

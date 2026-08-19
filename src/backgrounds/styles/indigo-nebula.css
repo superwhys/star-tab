@@ -1,0 +1,12 @@
+.background--indigo-nebula {
+  background:
+    radial-gradient(ellipse at 30% 32%, rgba(58, 91, 188, 0.5), transparent 27%),
+    radial-gradient(ellipse at 76% 68%, rgba(57, 44, 145, 0.36), transparent 30%),
+    linear-gradient(142deg, #06091c 0%, #111a47 53%, #08091d 100%);
+}
+
+.background--indigo-nebula .star-background__nebula {
+  background:
+    radial-gradient(ellipse at 20% 38%, rgba(80, 124, 245, 0.34), transparent 31%),
+    radial-gradient(ellipse at 76% 67%, rgba(93, 69, 224, 0.27), transparent 34%);
+}

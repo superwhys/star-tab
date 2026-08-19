@@ -1,0 +1,12 @@
+.background--violet-orbit {
+  background:
+    radial-gradient(ellipse at 72% 19%, rgba(137, 86, 204, 0.38), transparent 29%),
+    radial-gradient(ellipse at 25% 76%, rgba(48, 84, 175, 0.31), transparent 26%),
+    linear-gradient(142deg, #0a081d 0%, #21133f 49%, #080a20 100%);
+}
+
+.background--violet-orbit .star-background__nebula {
+  background:
+    radial-gradient(ellipse at 73% 25%, rgba(177, 99, 246, 0.32), transparent 31%),
+    radial-gradient(ellipse at 22% 72%, rgba(63, 112, 236, 0.25), transparent 29%);
+}

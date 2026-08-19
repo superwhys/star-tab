@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { BACKGROUND_PRESETS } from '../data/backgrounds'
+import { BACKGROUND_PRESETS } from '../backgrounds'
 import { useSettings } from './useSettings'
 
 export function useBackground() {
@@ -26,4 +26,3 @@ export function useBackground() {
 
   return { currentBackground, prefersReducedMotion, shouldAnimate }
 }
-

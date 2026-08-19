@@ -1,4 +1,4 @@
-import { BACKGROUND_IDS } from '../data/backgrounds'
+import { BACKGROUND_IDS } from '../backgrounds'
 import type { StarPageSettings } from '../types'
 
 export const SETTINGS_STORAGE_KEY = 'star-page:settings'
@@ -33,4 +33,3 @@ export function sanitizeSettings(value: unknown): StarPageSettings {
       typeof candidate.motionEnabled === 'boolean' ? candidate.motionEnabled : DEFAULT_SETTINGS.motionEnabled,
   }
 }
-

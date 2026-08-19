@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
-import { BACKGROUND_PRESETS } from '../data/backgrounds'
+import { BACKGROUND_PRESETS } from '../backgrounds'
 import { useBackground } from '../composables/useBackground'
 import { useSettings } from '../composables/useSettings'
 import IconSymbol from './IconSymbol.vue'
