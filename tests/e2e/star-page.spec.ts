@@ -60,6 +60,44 @@ test('switches the search engine and restores it after reload', async ({ page })
   await expect(page.getByRole('button', { name: '搜索引擎：Bing' })).toBeVisible()
 })
 
+test('links bookmark search to the 3D sphere and restores the view after clearing', async ({ page }) => {
+  await page.getByRole('button', { name: '切换到 3D 星球布局' }).click()
+  const sphere = page.getByRole('region', { name: '可旋转和缩放的书签星球' })
+  const search = page.getByPlaceholder('搜索书签或网页…')
+  const vueNode = page.getByRole('link', { name: '打开书签 Vue.js' })
+
+  await search.fill('Vue')
+  await expect(page.getByText('星图定位')).toBeVisible()
+  await expect(vueNode).toHaveClass(/constellation-node--search-focus/)
+  await expect(sphere.locator('output')).toHaveText('152%')
+
+  await expect(sphere).toHaveAttribute('data-search-camera', 'focused', { timeout: 5000 })
+  const [sphereBox, nodeBox] = await Promise.all([sphere.boundingBox(), vueNode.boundingBox()])
+  expect(sphereBox).not.toBeNull()
+  expect(nodeBox).not.toBeNull()
+  expect(Math.abs((nodeBox!.x + nodeBox!.width / 2) - (sphereBox!.x + sphereBox!.width / 2))).toBeLessThan(28)
+  expect(Math.abs((nodeBox!.y + nodeBox!.height / 2) - (sphereBox!.y + sphereBox!.height / 2))).toBeLessThan(28)
+
+  await search.fill('V')
+  await search.press('ArrowDown')
+  await search.press('ArrowDown')
+  const viteNode = page.getByRole('link', { name: '打开书签 Vite' })
+  await expect(viteNode).toHaveClass(/constellation-node--search-focus/)
+  await expect(vueNode).not.toHaveClass(/constellation-node--search-focus/)
+  await expect(page.locator('.constellation-search-status strong')).toHaveText('Vite')
+
+  await search.fill('')
+  await expect(page.getByText('星图定位')).toBeHidden()
+  await expect(vueNode).not.toHaveClass(/constellation-node--search-focus/)
+  await expect(sphere.locator('output')).toHaveText('118%')
+
+  await search.fill('GitLab')
+  const temporaryNode = page.getByRole('link', { name: '打开书签 GitLab' })
+  await expect(temporaryNode).toHaveAttribute('data-constellation-node-id', 'search:node:118')
+  await expect(temporaryNode).toHaveClass(/constellation-node--search-focus/)
+  await expect(sphere).toHaveAttribute('data-search-camera', 'focused', { timeout: 5000 })
+})
+
 test('blocks the context menu, page text selection and element dragging', async ({ page }) => {
   const result = await page.evaluate(() => {
     const target = document.querySelector('.brand')!

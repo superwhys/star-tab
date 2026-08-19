@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ConstellationNode } from './constellation'
 import {
+  cameraRotationForPoint,
   createSphereCoordinates,
   driftSpherePoint,
   projectSpherePoint,
@@ -47,5 +48,16 @@ describe('constellation sphere math', () => {
     expect(front.scale).toBeGreaterThan(back.scale)
     expect(front.opacity).toBeGreaterThan(back.opacity)
     expect(zoomed.x - viewport.width / 2).toBeCloseTo((normal.x - viewport.width / 2) * 1.5, 6)
+  })
+
+  it('calculates the shortest camera rotation that brings a node to the front center', () => {
+    const point = { x: 0.61, y: -0.34, z: -0.71 }
+    const target = cameraRotationForPoint(point, Math.PI * 2.2)
+    const focused = rotateSpherePoint(point, target.rotationX, target.rotationY)
+
+    expect(focused.x).toBeCloseTo(0, 6)
+    expect(focused.y).toBeCloseTo(0, 6)
+    expect(focused.z).toBeGreaterThan(0.99)
+    expect(Math.abs(target.rotationY - Math.PI * 2.2)).toBeLessThanOrEqual(Math.PI)
   })
 })

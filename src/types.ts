@@ -25,6 +25,13 @@ export type BookmarkLayout = 'grid' | 'constellation'
 
 export type SearchEngineId = 'default' | 'google' | 'bing' | 'baidu' | 'duckduckgo'
 
+export interface BookmarkSearchState {
+  query: string
+  matchIds: string[]
+  matches?: BookmarkNode[]
+  activeId?: string
+}
+
 export interface BackgroundPreset {
   id: string
   name: string

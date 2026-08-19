@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useBookmarks } from '../composables/useBookmarks'
-import type { BookmarkLayout, BookmarkNode } from '../types'
+import type { BookmarkLayout, BookmarkNode, BookmarkSearchState } from '../types'
 import BookmarkConstellationSphere from './BookmarkConstellationSphere.vue'
 import BookmarkSection from './BookmarkSection.vue'
 import IconSymbol from './IconSymbol.vue'
@@ -9,6 +9,7 @@ defineProps<{
   compact?: boolean
   layout?: BookmarkLayout
   motion?: boolean
+  searchState?: BookmarkSearchState
 }>()
 
 const emit = defineEmits<{
@@ -56,6 +57,7 @@ function handleFolder(node: BookmarkNode) {
       v-else-if="visibleSections.length && layout === 'constellation'"
       :sections="visibleSections"
       :motion="motion"
+      :search-state="searchState"
       @open-folder="handleFolder"
       @change-layout="emit('changeLayout', $event)"
     />

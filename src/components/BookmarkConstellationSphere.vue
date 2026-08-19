@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from 'vue'
-import type { BookmarkNode } from '../types'
-import { buildConstellationLayout, type ConstellationNode } from '../utils/constellation'
+import type { BookmarkNode, BookmarkSearchState } from '../types'
+import {
+  buildConstellationLayout,
+  CONSTELLATION_COLORS,
+  type ConstellationLayout,
+  type ConstellationNode,
+} from '../utils/constellation'
 import {
   createSphereCoordinates,
+  cameraRotationForPoint,
   driftSpherePoint,
+  nearestEquivalentAngle,
   projectSpherePoint,
   sphereRadius,
   type ProjectedSpherePoint,
@@ -15,11 +22,13 @@ import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
 
 const DEFAULT_SPHERE_ZOOM = 1.18
+const SEARCH_FOCUS_ZOOM = 1.52
 
 const props = withDefaults(
   defineProps<{
     sections: BookmarkNode[]
     motion?: boolean
+    searchState?: BookmarkSearchState
   }>(),
   { motion: true },
 )
@@ -33,10 +42,34 @@ const container = ref<HTMLElement>()
 const canvas = ref<HTMLCanvasElement>()
 const zoomPercent = ref(Math.round(DEFAULT_SPHERE_ZOOM * 100))
 const dragging = ref(false)
+const searchCameraFocused = ref(false)
 const prefersReducedMotion = ref(false)
 const pageHidden = ref(false)
-const layout = computed(() => buildConstellationLayout(props.sections))
+const layout = computed(() => addTemporarySearchNodes(buildConstellationLayout(props.sections)))
 const sphereCoordinates = computed(() => createSphereCoordinates(layout.value.nodes))
+const searchMatchIds = computed(() => new Set(props.searchState?.matchIds ?? []))
+const visibleSearchMatches = computed(() =>
+  layout.value.nodes.filter((node) => node.kind === 'bookmark' && searchMatchIds.value.has(node.node.id)),
+)
+const focusedSearchNode = computed(() => {
+  const activeId = props.searchState?.activeId
+  if (activeId) {
+    const activeNode = visibleSearchMatches.value.find((node) => node.node.id === activeId)
+    if (activeNode) return activeNode
+  }
+
+  for (const matchId of props.searchState?.matchIds ?? []) {
+    const node = visibleSearchMatches.value.find((candidate) => candidate.node.id === matchId)
+    if (node) return node
+  }
+  return undefined
+})
+const searchMatchNodeIds = computed(
+  () => new Set(visibleSearchMatches.value.map((node) => node.id)),
+)
+const searchLinkActive = computed(
+  () => Boolean(props.searchState?.query && visibleSearchMatches.value.length),
+)
 const shouldAutoAnimate = computed(
   () => props.motion && !prefersReducedMotion.value && !pageHidden.value,
 )
@@ -63,6 +96,48 @@ let devicePixelRatio = 1
 let resizeObserver: ResizeObserver | undefined
 let motionMedia: MediaQueryList | undefined
 let nodeElements = new Map<string, HTMLElement>()
+let rotationTarget: { rotationX: number; rotationY: number; mode: 'focus' | 'restore' } | undefined
+let searchViewSnapshot: { rotationX: number; rotationY: number; zoom: number } | undefined
+
+function addTemporarySearchNodes(base: ConstellationLayout): ConstellationLayout {
+  if (!props.searchState?.query || !props.searchState.matches?.length || !props.sections.length) return base
+
+  const existingBookmarkIds = new Set(base.nodes.map((node) => node.node.id))
+  const missingMatches = props.searchState.matches.filter(
+    (bookmark) => bookmark.type === 'bookmark' && bookmark.url && !existingBookmarkIds.has(bookmark.id),
+  )
+  if (!missingMatches.length) return base
+
+  const section = props.sections[0]
+  const sectionRoot = base.nodes.find((node) => node.kind === 'section' && node.node.id === section.id)
+  const temporaryNodes: ConstellationNode[] = missingMatches.map((bookmark, index) => ({
+    id: `search:node:${bookmark.id}`,
+    kind: 'bookmark',
+    title: bookmark.title || '未命名书签',
+    node: bookmark,
+    section,
+    url: bookmark.url,
+    x: 500,
+    y: 300,
+    size: 30,
+    color: CONSTELLATION_COLORS[(index + 3) % CONSTELLATION_COLORS.length],
+    depth: 1,
+    delay: index * -0.55,
+  }))
+  const temporaryEdges = sectionRoot
+    ? temporaryNodes.map((node) => ({
+        id: `${sectionRoot.id}->${node.id}`,
+        from: sectionRoot.id,
+        to: node.id,
+        color: node.color,
+      }))
+    : []
+
+  return {
+    nodes: [...base.nodes, ...temporaryNodes],
+    edges: [...base.edges, ...temporaryEdges],
+  }
+}
 
 function staticNodeStyle(node: ConstellationNode): CSSProperties {
   return {
@@ -76,6 +151,13 @@ function nodeAriaLabel(node: ConstellationNode): string {
   if (node.kind === 'bookmark') return `打开书签 ${node.title}`
   if (node.kind === 'more') return `打开文件夹 ${node.section.title}，查看另外 ${node.hiddenCount} 项`
   return `打开文件夹 ${node.title}`
+}
+
+function nodeSearchClasses(node: ConstellationNode) {
+  return {
+    'constellation-node--search-match': searchLinkActive.value && searchMatchNodeIds.value.has(node.id),
+    'constellation-node--search-focus': focusedSearchNode.value?.id === node.id,
+  }
 }
 
 function cacheNodeElements() {
@@ -96,10 +178,29 @@ function renderFrame(timestamp: number) {
   const delta = previousFrameTime ? Math.min(40, timestamp - previousFrameTime) : 16
   previousFrameTime = timestamp
 
-  if (shouldAutoAnimate.value && !dragging.value) {
+  if (shouldAutoAnimate.value) motionElapsed += delta
+
+  let rotationChanging = false
+  if (rotationTarget && !dragging.value) {
+    const rotationXDifference = rotationTarget.rotationX - camera.rotationX
+    const rotationYDifference = rotationTarget.rotationY - camera.rotationY
+    rotationChanging = Math.abs(rotationXDifference) > 0.0005 || Math.abs(rotationYDifference) > 0.0005
+    if (rotationChanging) {
+      const interpolation = 1 - Math.pow(0.8, delta / 16)
+      camera.rotationX += rotationXDifference * interpolation
+      camera.rotationY += rotationYDifference * interpolation
+    } else {
+      camera.rotationX = rotationTarget.rotationX
+      camera.rotationY = rotationTarget.rotationY
+      if (rotationTarget.mode === 'focus') searchCameraFocused.value = true
+      else {
+        rotationTarget = undefined
+        searchViewSnapshot = undefined
+      }
+    }
+  } else if (shouldAutoAnimate.value && !dragging.value) {
     camera.rotationY += delta * 0.0002
     camera.rotationX += Math.sin(timestamp * 0.00031) * delta * 0.000009
-    motionElapsed += delta
   }
 
   const hasInertia = !dragging.value && (Math.abs(velocityX) > 0.00001 || Math.abs(velocityY) > 0.00001)
@@ -119,7 +220,7 @@ function renderFrame(timestamp: number) {
   const projectedPoints = projectNodes()
   drawSphere(projectedPoints)
 
-  if (shouldAutoAnimate.value || dragging.value || hasInertia || zoomChanging) scheduleRender()
+  if (shouldAutoAnimate.value || dragging.value || hasInertia || zoomChanging || rotationChanging) scheduleRender()
 }
 
 function projectNodes(): Map<string, ProjectedSpherePoint> {
@@ -137,10 +238,21 @@ function projectNodes(): Map<string, ProjectedSpherePoint> {
 
     const element = nodeElements.get(node.id)
     if (!element) continue
-    element.style.transform = `translate3d(${projected.x}px, ${projected.y}px, 0) translate(-50%, -50%) scale(${projected.scale})`
-    element.style.opacity = String(projected.opacity)
+    const searchMatch = searchLinkActive.value && searchMatchNodeIds.value.has(node.id)
+    const searchFocus = focusedSearchNode.value?.id === node.id
+    const searchScale = searchFocus ? 1.24 : searchMatch ? 1.09 : searchLinkActive.value ? 0.86 : 1
+    const searchOpacity = searchFocus
+      ? 1
+      : searchMatch
+        ? Math.max(0.82, projected.opacity)
+        : searchLinkActive.value
+          ? projected.opacity * 0.2
+          : projected.opacity
+    element.style.transform = `translate3d(${projected.x}px, ${projected.y}px, 0) translate(-50%, -50%) scale(${projected.scale * searchScale})`
+    element.style.opacity = String(searchOpacity)
     element.style.zIndex = String(Math.round((projected.depth + 1) * 50) + 5)
     element.dataset.sphereSide = projected.depth >= 0 ? 'front' : 'back'
+    element.dataset.searchState = searchFocus ? 'focus' : searchMatch ? 'match' : searchLinkActive.value ? 'dimmed' : 'idle'
   }
 
   return projectedPoints
@@ -178,7 +290,9 @@ function drawSphere(projectedPoints: Map<string, ProjectedSpherePoint>) {
 
   for (const { edge, from, to, index, depth } of renderedEdges) {
     const depthRatio = (depth + 1) * 0.5
-    const alpha = 0.08 + depthRatio * 0.3
+    const edgeMatchesSearch = searchMatchNodeIds.value.has(edge.from) || searchMatchNodeIds.value.has(edge.to)
+    const searchAlpha = searchLinkActive.value ? (edgeMatchesSearch ? 1.55 : 0.16) : 1
+    const alpha = (0.08 + depthRatio * 0.3) * searchAlpha
     context.strokeStyle = colorWithAlpha(edge.color, alpha)
     context.lineWidth = 0.7 + depthRatio * 1.15
     context.beginPath()
@@ -197,6 +311,45 @@ function drawSphere(projectedPoints: Map<string, ProjectedSpherePoint>) {
       context.fill()
     }
   }
+}
+
+function focusSearchNode(node: ConstellationNode) {
+  const coordinate = sphereCoordinates.value.get(node.id)
+  if (!coordinate) return
+
+  if (!searchViewSnapshot) {
+    searchViewSnapshot = {
+      rotationX: camera.rotationX,
+      rotationY: camera.rotationY,
+      zoom: targetZoom,
+    }
+  }
+
+  const target = cameraRotationForPoint(coordinate, camera.rotationY)
+  rotationTarget = {
+    rotationX: clamp(target.rotationX, -1.35, 1.35),
+    rotationY: target.rotationY,
+    mode: 'focus',
+  }
+  searchCameraFocused.value = false
+  velocityX = 0
+  velocityY = 0
+  setTargetZoom(Math.max(targetZoom, SEARCH_FOCUS_ZOOM))
+  scheduleRender()
+}
+
+function restoreSearchView() {
+  if (!searchViewSnapshot || rotationTarget?.mode === 'restore') return
+  rotationTarget = {
+    rotationX: searchViewSnapshot.rotationX,
+    rotationY: nearestEquivalentAngle(searchViewSnapshot.rotationY, camera.rotationY),
+    mode: 'restore',
+  }
+  searchCameraFocused.value = false
+  velocityX = 0
+  velocityY = 0
+  setTargetZoom(searchViewSnapshot.zoom)
+  scheduleRender()
 }
 
 function drawSphereGuides(
@@ -249,6 +402,7 @@ function handlePointerDown(event: PointerEvent) {
   pointerTime = performance.now()
   velocityX = 0
   velocityY = 0
+  searchCameraFocused.value = false
   dragging.value = true
   container.value?.setPointerCapture(event.pointerId)
   scheduleRender()
@@ -363,6 +517,14 @@ watch(layout, async () => {
   scheduleRender()
 })
 watch(shouldAutoAnimate, () => scheduleRender())
+watch(
+  focusedSearchNode,
+  (node) => {
+    if (node) focusSearchNode(node)
+    else restoreSearchView()
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   mounted = true
@@ -395,7 +557,11 @@ onBeforeUnmount(() => {
   <section
     ref="container"
     class="bookmark-constellation bookmark-constellation--sphere"
-    :class="{ 'bookmark-constellation--dragging': dragging }"
+    :class="{
+      'bookmark-constellation--dragging': dragging,
+      'bookmark-constellation--searching': searchLinkActive,
+    }"
+    :data-search-camera="searchLinkActive ? (searchCameraFocused ? 'focused' : 'tracking') : 'idle'"
     tabindex="0"
     aria-label="可旋转和缩放的书签星球"
     @pointerdown="handlePointerDown"
@@ -408,10 +574,22 @@ onBeforeUnmount(() => {
   >
     <canvas ref="canvas" class="constellation-canvas" aria-hidden="true"></canvas>
 
+    <Transition name="feedback">
+      <div v-if="searchLinkActive && focusedSearchNode" class="constellation-search-status" role="status">
+        <span class="constellation-search-status__mark"><IconSymbol name="search" :size="14" /></span>
+        <span class="constellation-search-status__copy">
+          <small>星图定位</small>
+          <strong>{{ focusedSearchNode.title }}</strong>
+        </span>
+        <span class="constellation-search-status__count">{{ visibleSearchMatches.length }} 个匹配</span>
+      </div>
+    </Transition>
+
     <template v-for="node in layout.nodes" :key="node.id">
       <a
         v-if="node.kind === 'bookmark'"
         class="constellation-node constellation-node--bookmark"
+        :class="nodeSearchClasses(node)"
         :data-depth="node.depth"
         :data-constellation-node-id="node.id"
         :style="staticNodeStyle(node)"
@@ -429,7 +607,7 @@ onBeforeUnmount(() => {
         v-else
         type="button"
         class="constellation-node"
-        :class="`constellation-node--${node.kind}`"
+        :class="[`constellation-node--${node.kind}`, nodeSearchClasses(node)]"
         :data-depth="node.depth"
         :data-constellation-node-id="node.id"
         :style="staticNodeStyle(node)"

@@ -115,6 +115,22 @@ export function sphereRadius(viewport: SphereViewport, zoom: number): number {
   return Math.min(viewport.width, viewport.height) * 0.355 * zoom
 }
 
+export function cameraRotationForPoint(
+  point: Vector3,
+  currentRotationY = 0,
+): Pick<SphereCamera, 'rotationX' | 'rotationY'> {
+  const rotationY = nearestEquivalentAngle(Math.atan2(-point.x, point.z), currentRotationY)
+  return {
+    rotationX: Math.atan2(point.y, Math.hypot(point.x, point.z)),
+    rotationY,
+  }
+}
+
+export function nearestEquivalentAngle(angle: number, reference: number): number {
+  const fullTurn = Math.PI * 2
+  return angle + Math.round((reference - angle) / fullTurn) * fullTurn
+}
+
 function normalizeVector(vector: Vector3): Vector3 {
   const length = Math.hypot(vector.x, vector.y, vector.z) || 1
   return {

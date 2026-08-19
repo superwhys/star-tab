@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import BookmarkDashboard from './components/BookmarkDashboard.vue'
 import ClockDisplay from './components/ClockDisplay.vue'
@@ -11,13 +11,14 @@ import StarBackground from './components/StarBackground.vue'
 import { usePageInteractionGuards } from './composables/usePageInteractionGuards'
 import { isExtensionRuntime } from './services/browser'
 import { useStarPageStore } from './stores/starPage'
-import type { BookmarkLayout } from './types'
+import type { BookmarkLayout, BookmarkSearchState } from './types'
 
 usePageInteractionGuards()
 
 const store = useStarPageStore()
 const { settings, settingsOpen, activeFolder } = storeToRefs(store)
 const prototypeMode = computed(() => !isExtensionRuntime())
+const bookmarkSearchState = ref<BookmarkSearchState>({ query: '', matchIds: [] })
 
 function handleEscape(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
@@ -61,13 +62,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
     <main class="new-tab-content">
       <section class="hero" aria-label="时间与搜索">
         <ClockDisplay :show-seconds="settings.showSeconds" />
-        <SearchBar />
+        <SearchBar @search-state-change="bookmarkSearchState = $event" />
       </section>
 
       <BookmarkDashboard
         :compact="settings.compactMode"
         :layout="settings.bookmarkLayout"
         :motion="settings.motionEnabled"
+        :search-state="bookmarkSearchState"
         @open-settings="settingsOpen = true"
         @change-layout="handleLayoutChange"
       />
