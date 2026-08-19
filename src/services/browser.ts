@@ -93,9 +93,10 @@ export async function writeSettings(settings: StarPageSettings): Promise<void> {
 
 export function createSettingsSnapshot(settings: StarPageSettings): StarPageSettings {
   return {
-    version: 1,
+    version: 2,
     backgroundId: settings.backgroundId,
     visibleFolderIds: [...settings.visibleFolderIds],
+    bookmarkLayout: settings.bookmarkLayout,
     showSeconds: settings.showSeconds,
     compactMode: settings.compactMode,
     motionEnabled: settings.motionEnabled,

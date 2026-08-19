@@ -11,6 +11,7 @@ import StarBackground from './components/StarBackground.vue'
 import { usePageInteractionGuards } from './composables/usePageInteractionGuards'
 import { isExtensionRuntime } from './services/browser'
 import { useStarPageStore } from './stores/starPage'
+import type { BookmarkLayout } from './types'
 
 usePageInteractionGuards()
 
@@ -22,6 +23,10 @@ function handleEscape(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
   if (activeFolder.value) store.closeFolder()
   else if (settingsOpen.value) settingsOpen.value = false
+}
+
+function handleLayoutChange(layout: BookmarkLayout) {
+  void store.updateSettings({ bookmarkLayout: layout })
 }
 
 onMounted(() => {
@@ -59,7 +64,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
         <SearchBar />
       </section>
 
-      <BookmarkDashboard :compact="settings.compactMode" @open-settings="settingsOpen = true" />
+      <BookmarkDashboard
+        :compact="settings.compactMode"
+        :layout="settings.bookmarkLayout"
+        :motion="settings.motionEnabled"
+        @open-settings="settingsOpen = true"
+        @change-layout="handleLayoutChange"
+      />
     </main>
 
     <p v-if="prototypeMode" class="prototype-note">交互原型 · 当前展示模拟书签</p>

@@ -38,7 +38,6 @@ describe('settings persistence adapter', () => {
 
     const stored = captured?.[SETTINGS_STORAGE_KEY]
     expect(isProxy(stored)).toBe(false)
-    expect(stored).toMatchObject({ backgroundId: 'violet-orbit', version: 1 })
+    expect(stored).toMatchObject({ backgroundId: 'violet-orbit', bookmarkLayout: 'grid', version: 2 })
   })
 })
-

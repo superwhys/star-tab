@@ -34,7 +34,11 @@ describe('star page store', () => {
   it('restores settings after a fresh store initialization', async () => {
     const firstStore = useStarPageStore()
     await firstStore.init()
-    await firstStore.updateSettings({ backgroundId: 'violet-orbit', showSeconds: false })
+    await firstStore.updateSettings({
+      backgroundId: 'violet-orbit',
+      bookmarkLayout: 'constellation',
+      showSeconds: false,
+    })
     expect(firstStore.settingsSaveState).toBe('saved')
 
     setActivePinia(createPinia())
@@ -42,6 +46,7 @@ describe('star page store', () => {
     await restoredStore.init()
 
     expect(restoredStore.settings.backgroundId).toBe('violet-orbit')
+    expect(restoredStore.settings.bookmarkLayout).toBe('constellation')
     expect(restoredStore.settings.showSeconds).toBe(false)
   })
 

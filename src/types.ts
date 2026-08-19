@@ -21,6 +21,8 @@ export type BackgroundKind = 'canvas-drift' | 'canvas-meteor' | 'ambient'
 
 export type SettingsSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
+export type BookmarkLayout = 'grid' | 'constellation'
+
 export interface BackgroundPreset {
   id: string
   name: string
@@ -30,9 +32,10 @@ export interface BackgroundPreset {
 }
 
 export interface StarPageSettings {
-  version: 1
+  version: 2
   backgroundId: string
   visibleFolderIds: string[]
+  bookmarkLayout: BookmarkLayout
   showSeconds: boolean
   compactMode: boolean
   motionEnabled: boolean

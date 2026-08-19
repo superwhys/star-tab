@@ -506,9 +506,352 @@ input:focus-visible {
 }
 
 .bookmark-dashboard {
+  position: relative;
   display: grid;
   gap: 34px;
   min-height: 180px;
+}
+
+.bookmark-layout-shortcut {
+  position: absolute;
+  z-index: 8;
+  top: -34px;
+  right: 8px;
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(211, 222, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(10, 14, 36, 0.54);
+  box-shadow: 0 8px 24px rgba(1, 3, 18, 0.16);
+  color: rgba(226, 233, 255, 0.62);
+  font-size: 9px;
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.bookmark-layout-shortcut:hover {
+  border-color: rgba(184, 203, 255, 0.22);
+  background: rgba(137, 162, 233, 0.13);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.bookmark-layout-shortcut span {
+  color: #9eb7ff;
+  font-size: 12px;
+  text-shadow: 0 0 9px rgba(113, 143, 234, 0.8);
+}
+
+.bookmark-dashboard--constellation {
+  display: block;
+  min-height: 620px;
+}
+
+.bookmark-constellation {
+  position: relative;
+  height: clamp(620px, calc(100vh - 350px), 700px);
+  min-height: 620px;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 42px;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+
+.new-tab-content:has(.bookmark-dashboard--constellation) {
+  padding-bottom: 24px;
+}
+
+.new-tab-content:has(.bookmark-dashboard--constellation) .hero {
+  margin-bottom: 32px;
+}
+
+.bookmark-constellation:focus-visible {
+  box-shadow: inset 0 0 0 1px rgba(174, 196, 255, 0.22);
+}
+
+.bookmark-constellation--dragging {
+  cursor: grabbing;
+}
+
+.bookmark-constellation::before {
+  position: absolute;
+  z-index: -1;
+  inset: 8% 4%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 51% 50%, rgba(128, 112, 227, 0.1), transparent 24%),
+    radial-gradient(circle at 34% 58%, rgba(65, 203, 178, 0.065), transparent 19%);
+  filter: blur(20px);
+  content: "";
+  pointer-events: none;
+}
+
+.constellation-canvas {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.constellation-node {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: grid;
+  width: var(--constellation-node-size);
+  height: var(--constellation-node-size);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 0;
+  transform: translate3d(50vw, 300px, 0) translate(-50%, -50%);
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.constellation-node--section {
+  z-index: 4;
+}
+
+.constellation-node__halo {
+  position: absolute;
+  inset: -45%;
+  border-radius: 50%;
+  background: var(--constellation-node-color);
+  filter: blur(15px);
+  opacity: 0.15;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.constellation-node__orb {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.96) 0 5%, transparent 20%),
+    radial-gradient(circle at 48% 52%, var(--constellation-node-color), rgba(30, 35, 78, 0.88) 82%);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.38),
+    0 0 9px var(--constellation-node-color),
+    0 0 28px rgba(113, 132, 230, 0.18);
+  color: rgba(255, 255, 255, 0.9);
+  transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+.constellation-node--bookmark .constellation-node__orb {
+  padding: 4px;
+}
+
+.constellation-node__orb .favicon {
+  border: 0;
+  border-radius: 50%;
+  background: rgba(9, 13, 35, 0.68);
+  box-shadow: none;
+}
+
+.constellation-node__orb .favicon img {
+  width: 66%;
+  height: 66%;
+}
+
+.constellation-node__more {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.constellation-node__label {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
+  display: block;
+  width: max-content;
+  max-width: 132px;
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px solid rgba(211, 222, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(10, 14, 36, 0.7);
+  box-shadow: 0 8px 24px rgba(1, 3, 18, 0.22);
+  color: rgba(240, 244, 255, 0.84);
+  font-size: 9px;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  transform: translate(-50%, -4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+}
+
+.constellation-node--section .constellation-node__label {
+  max-width: 160px;
+  border-color: rgba(211, 222, 255, 0.08);
+  background: rgba(10, 14, 36, 0.5);
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.constellation-node[data-sphere-side="back"] .constellation-node__label {
+  opacity: 0;
+}
+
+.constellation-node:hover,
+.constellation-node:focus-visible {
+  z-index: 7;
+}
+
+.constellation-node:hover .constellation-node__halo,
+.constellation-node:focus-visible .constellation-node__halo {
+  opacity: 0.32;
+  transform: scale(1.2);
+}
+
+.constellation-node:hover .constellation-node__orb,
+.constellation-node:focus-visible .constellation-node__orb {
+  border-color: rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.48),
+    0 0 14px var(--constellation-node-color),
+    0 0 42px var(--constellation-node-color);
+  transform: scale(1.18);
+}
+
+.constellation-node:hover .constellation-node__label,
+.constellation-node:focus-visible .constellation-node__label {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.app-shell--motion .constellation-node__orb {
+  animation: constellation-breathe 3.8s ease-in-out infinite alternate;
+  animation-delay: var(--constellation-delay);
+}
+
+.app-shell--motion .constellation-node:hover .constellation-node__orb,
+.app-shell--motion .constellation-node:focus-visible .constellation-node__orb {
+  animation-play-state: paused;
+}
+
+@keyframes constellation-breathe {
+  from { filter: brightness(0.9); }
+  to { filter: brightness(1.2); }
+}
+
+.constellation-hint {
+  position: absolute;
+  right: 20px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: rgba(211, 220, 255, 0.3);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.constellation-hint span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #9eb7ff;
+  box-shadow: 0 0 9px #718fea;
+}
+
+.constellation-controls {
+  position: absolute;
+  z-index: 120;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  height: 34px;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(211, 222, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(10, 14, 36, 0.54);
+  box-shadow: 0 10px 30px rgba(1, 3, 18, 0.18);
+  cursor: default;
+  backdrop-filter: blur(16px);
+}
+
+.constellation-controls button {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(232, 237, 255, 0.7);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.constellation-controls button:hover {
+  background: rgba(137, 162, 233, 0.15);
+  color: white;
+}
+
+.constellation-controls output {
+  min-width: 43px;
+  color: rgba(213, 223, 255, 0.48);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.constellation-controls .constellation-controls__reset {
+  margin-left: 2px;
+  border-left: 1px solid rgba(211, 222, 255, 0.09);
+  border-radius: 0 8px 8px 0;
+  font-size: 14px;
+}
+
+.constellation-controls .constellation-controls__layout {
+  width: auto;
+  min-width: 52px;
+  grid-auto-flow: column;
+  gap: 5px;
+  margin-left: 3px;
+  padding: 0 8px;
+  border-left: 1px solid rgba(211, 222, 255, 0.09);
+  border-radius: 0 8px 8px 0;
+  color: rgba(226, 233, 255, 0.62);
+  font-size: 9px;
+}
+
+.constellation-controls__layout span {
+  color: #9eb7ff;
+  font-size: 12px;
 }
 
 .bookmark-section {
@@ -1513,6 +1856,16 @@ input:focus-visible {
     gap-inline: 5px;
   }
 
+  .bookmark-dashboard--constellation {
+    min-height: 460px;
+  }
+
+  .bookmark-constellation {
+    height: 460px;
+    min-height: 460px;
+    border-radius: 28px;
+  }
+
   .folder-overlay {
     padding: 12px;
   }
@@ -1556,6 +1909,11 @@ input:focus-visible {
 
   .bookmark-tile__count {
     right: 3px;
+  }
+
+  .bookmark-constellation {
+    height: 420px;
+    min-height: 420px;
   }
 
   .folder-dialog__header {

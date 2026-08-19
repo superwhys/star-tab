@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { useBookmarks } from '../composables/useBookmarks'
-import type { BookmarkNode } from '../types'
+import type { BookmarkLayout, BookmarkNode } from '../types'
+import BookmarkConstellationSphere from './BookmarkConstellationSphere.vue'
 import BookmarkSection from './BookmarkSection.vue'
 import IconSymbol from './IconSymbol.vue'
 
 defineProps<{
   compact?: boolean
+  layout?: BookmarkLayout
+  motion?: boolean
 }>()
 
 const emit = defineEmits<{
   openSettings: []
+  changeLayout: [layout: BookmarkLayout]
 }>()
 
 const { loading, bookmarkError, visibleSections, openFolder, refreshBookmarks } = useBookmarks()
@@ -20,7 +24,22 @@ function handleFolder(node: BookmarkNode) {
 </script>
 
 <template>
-  <div class="bookmark-dashboard">
+  <div
+    class="bookmark-dashboard"
+    :class="{ 'bookmark-dashboard--constellation': layout === 'constellation' }"
+  >
+    <button
+      v-if="!loading && !bookmarkError && visibleSections.length && layout !== 'constellation'"
+      type="button"
+      class="bookmark-layout-shortcut"
+      aria-label="切换到 3D 星球布局"
+      title="切换到 3D 星球"
+      @click="emit('changeLayout', 'constellation')"
+    >
+      <span aria-hidden="true">◉</span>
+      3D 星球
+    </button>
+
     <div v-if="loading" class="bookmark-skeleton" aria-label="正在加载书签">
       <span v-for="index in 8" :key="index"></span>
     </div>
@@ -32,6 +51,14 @@ function handleFolder(node: BookmarkNode) {
         重新读取
       </button>
     </div>
+
+    <BookmarkConstellationSphere
+      v-else-if="visibleSections.length && layout === 'constellation'"
+      :sections="visibleSections"
+      :motion="motion"
+      @open-folder="handleFolder"
+      @change-layout="emit('changeLayout', $event)"
+    />
 
     <template v-else-if="visibleSections.length">
       <BookmarkSection
@@ -51,4 +78,3 @@ function handleFolder(node: BookmarkNode) {
     </div>
   </div>
 </template>
-

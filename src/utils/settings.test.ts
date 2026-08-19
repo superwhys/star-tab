@@ -11,15 +11,17 @@ describe('settings migration', () => {
       version: 7,
       backgroundId: 'violet-orbit',
       visibleFolderIds: ['1', 2, null, '110'],
+      bookmarkLayout: 'constellation',
       showSeconds: false,
       compactMode: true,
       motionEnabled: false,
     })
 
     expect(result).toEqual({
-      version: 1,
+      version: 2,
       backgroundId: 'violet-orbit',
       visibleFolderIds: ['1', '110'],
+      bookmarkLayout: 'constellation',
       showSeconds: false,
       compactMode: true,
       motionEnabled: false,
@@ -29,5 +31,9 @@ describe('settings migration', () => {
   it('falls back from an unknown background', () => {
     expect(sanitizeSettings({ backgroundId: 'unknown' }).backgroundId).toBe(DEFAULT_SETTINGS.backgroundId)
   })
-})
 
+  it('migrates old settings to the grid layout and rejects unknown layouts', () => {
+    expect(sanitizeSettings({ version: 1 }).bookmarkLayout).toBe('grid')
+    expect(sanitizeSettings({ bookmarkLayout: 'list' }).bookmarkLayout).toBe('grid')
+  })
+})
