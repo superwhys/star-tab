@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useBookmarks } from '../composables/useBookmarks'
-import BookmarkTile from './BookmarkTile.vue'
+import BookmarkGrid from './BookmarkGrid.vue'
 import IconSymbol from './IconSymbol.vue'
 
 const {
@@ -64,14 +64,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
           </header>
 
           <div class="folder-dialog__body">
-            <div v-if="activeFolder.children.length" class="bookmark-grid bookmark-grid--dialog">
-              <BookmarkTile
-                v-for="node in activeFolder.children"
-                :key="node.id"
-                :node="node"
-                @open-folder="enterFolder"
-              />
-            </div>
+            <BookmarkGrid
+              v-if="activeFolder.children.length"
+              :nodes="activeFolder.children"
+              dialog
+              @open-folder="enterFolder"
+            />
             <div v-else class="folder-dialog__empty">
               <span><IconSymbol name="folder" :size="30" /></span>
               <h2 :id="`folder-title-${activeFolder.id}`">空文件夹</h2>

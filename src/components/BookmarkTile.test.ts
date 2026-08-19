@@ -32,6 +32,7 @@ describe('BookmarkTile', () => {
     await wrapper.get('button').trigger('click')
     expect(wrapper.emitted('openFolder')?.[0]).toEqual([folder])
     expect(wrapper.find('a').exists()).toBe(false)
+    expect(wrapper.find('.bookmark-tile__count').exists()).toBe(false)
   })
 })
 

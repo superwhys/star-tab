@@ -49,7 +49,6 @@ const emit = defineEmits<{
       </template>
     </span>
     <span class="bookmark-tile__title" :title="node.title">{{ node.title }}</span>
-    <span class="bookmark-tile__count">{{ node.children.length }}</span>
   </button>
 </template>
 

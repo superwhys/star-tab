@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { BookmarkNode } from '../types'
-import BookmarkTile from './BookmarkTile.vue'
+import BookmarkGrid from './BookmarkGrid.vue'
 
 defineProps<{
   section: BookmarkNode
@@ -18,16 +18,12 @@ const emit = defineEmits<{
       <h2 :id="`section-${section.id}`">{{ section.title || '书签' }}</h2>
       <span>{{ section.children.length }} 项</span>
     </div>
-    <div v-if="section.children.length" class="bookmark-grid">
-      <BookmarkTile
-        v-for="node in section.children"
-        :key="node.id"
-        :node="node"
-        :compact="compact"
-        @open-folder="emit('openFolder', $event)"
-      />
-    </div>
+    <BookmarkGrid
+      v-if="section.children.length"
+      :nodes="section.children"
+      :compact="compact"
+      @open-folder="emit('openFolder', $event)"
+    />
     <div v-else class="section-empty">这个文件夹还没有书签</div>
   </section>
 </template>
-
