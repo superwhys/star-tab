@@ -3,7 +3,7 @@
   "name": "星页",
   "short_name": "星页",
   "version": "0.1.0",
-  "description": "如星辰般的新标签页：时钟、默认搜索与书签星图。",
+  "description": "如星辰般的新标签页：时钟、多引擎搜索与书签星图。",
   "permissions": ["bookmarks", "favicon", "search", "storage"],
   "chrome_url_overrides": {
     "newtab": "index.html"
@@ -15,4 +15,3 @@
     "128": "icons/icon-128.png"
   }
 }
-

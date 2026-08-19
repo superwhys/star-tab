@@ -1,13 +1,15 @@
 import { BACKGROUND_IDS } from '../backgrounds'
+import { isSearchEngineId } from '../search/engines'
 import type { BookmarkLayout, StarPageSettings } from '../types'
 
 export const SETTINGS_STORAGE_KEY = 'star-page:settings'
 
 export const DEFAULT_SETTINGS: StarPageSettings = {
-  version: 2,
+  version: 3,
   backgroundId: 'stellar-drift',
   visibleFolderIds: [],
   bookmarkLayout: 'grid',
+  searchEngineId: 'default',
   showSeconds: true,
   compactMode: false,
   motionEnabled: true,
@@ -18,7 +20,7 @@ export function sanitizeSettings(value: unknown): StarPageSettings {
   const candidate = value as Partial<StarPageSettings>
 
   return {
-    version: 2,
+    version: 3,
     backgroundId:
       typeof candidate.backgroundId === 'string' && BACKGROUND_IDS.includes(candidate.backgroundId)
         ? candidate.backgroundId
@@ -29,6 +31,9 @@ export function sanitizeSettings(value: unknown): StarPageSettings {
     bookmarkLayout: isBookmarkLayout(candidate.bookmarkLayout)
       ? candidate.bookmarkLayout
       : DEFAULT_SETTINGS.bookmarkLayout,
+    searchEngineId: isSearchEngineId(candidate.searchEngineId)
+      ? candidate.searchEngineId
+      : DEFAULT_SETTINGS.searchEngineId,
     showSeconds:
       typeof candidate.showSeconds === 'boolean' ? candidate.showSeconds : DEFAULT_SETTINGS.showSeconds,
     compactMode:

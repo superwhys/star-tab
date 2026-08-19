@@ -6,14 +6,14 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('search prototype gives visible feedback', async ({ page }) => {
-  const search = page.getByRole('combobox', { name: '使用默认搜索引擎搜索' })
+  const search = page.getByPlaceholder('搜索书签或网页…')
   await search.fill('Vue 3')
   await search.press('Enter')
   await expect(page.getByRole('status')).toContainText('原型模式')
 })
 
 test('searches bookmarks without overriding the default Enter behavior', async ({ page }) => {
-  const search = page.getByRole('combobox', { name: '使用默认搜索引擎搜索' })
+  const search = page.getByPlaceholder('搜索书签或网页…')
   await search.fill('Vue')
 
   const option = page.getByRole('option', { name: /Vue\.js/ })
@@ -22,7 +22,7 @@ test('searches bookmarks without overriding the default Enter behavior', async (
   await expect(search).not.toHaveAttribute('aria-activedescendant')
 
   await search.press('Enter')
-  await expect(page.getByRole('status')).toContainText('默认搜索引擎搜索“Vue”')
+  await expect(page.getByRole('status')).toContainText('浏览器默认搜索“Vue”')
 
   await page.evaluate(() => {
     document.addEventListener(
@@ -43,6 +43,21 @@ test('searches bookmarks without overriding the default Enter behavior', async (
   await search.press('Enter')
   await expect.poll(() => page.evaluate(() => (window as typeof window & { openedBookmark?: string }).openedBookmark))
     .toBe('https://vuejs.org/')
+})
+
+test('switches the search engine and restores it after reload', async ({ page }) => {
+  await page.getByRole('button', { name: '搜索引擎：浏览器默认' }).click()
+  await expect(page.getByRole('listbox', { name: '选择搜索引擎' })).toBeVisible()
+  await page.getByRole('option', { name: /Bing/ }).click()
+
+  await expect(page.getByRole('button', { name: '搜索引擎：Bing' })).toBeVisible()
+  const search = page.getByPlaceholder('搜索书签或网页…')
+  await search.fill('星页')
+  await search.press('Enter')
+  await expect(page.getByRole('status')).toContainText('使用Bing搜索“星页”')
+
+  await page.reload()
+  await expect(page.getByRole('button', { name: '搜索引擎：Bing' })).toBeVisible()
 })
 
 test('blocks the context menu, page text selection and element dragging', async ({ page }) => {

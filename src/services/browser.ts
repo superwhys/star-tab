@@ -1,5 +1,6 @@
 import { MOCK_BOOKMARK_TREE } from '../data/mockBookmarks'
-import type { BookmarkNode, StarPageSettings } from '../types'
+import { buildSearchUrl } from '../search/engines'
+import type { BookmarkNode, SearchEngineId, StarPageSettings } from '../types'
 import { normalizeBookmarkTree } from '../utils/bookmarks'
 import { SETTINGS_STORAGE_KEY } from '../utils/settings'
 
@@ -93,10 +94,11 @@ export async function writeSettings(settings: StarPageSettings): Promise<void> {
 
 export function createSettingsSnapshot(settings: StarPageSettings): StarPageSettings {
   return {
-    version: 2,
+    version: 3,
     backgroundId: settings.backgroundId,
     visibleFolderIds: [...settings.visibleFolderIds],
     bookmarkLayout: settings.bookmarkLayout,
+    searchEngineId: settings.searchEngineId,
     showSeconds: settings.showSeconds,
     compactMode: settings.compactMode,
     motionEnabled: settings.motionEnabled,
@@ -116,6 +118,17 @@ export async function searchWithDefaultEngine(text: string): Promise<'chrome' | 
       resolve('chrome')
     })
   })
+}
+
+export async function searchWithEngine(
+  text: string,
+  engineId: SearchEngineId,
+): Promise<'chrome' | 'navigation' | 'prototype'> {
+  if (engineId === 'default') return searchWithDefaultEngine(text)
+  if (!isExtensionRuntime()) return 'prototype'
+
+  window.location.assign(buildSearchUrl(engineId, text))
+  return 'navigation'
 }
 
 export function faviconUrl(pageUrl?: string, size = 64): string | undefined {

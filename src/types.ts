@@ -23,6 +23,8 @@ export type SettingsSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export type BookmarkLayout = 'grid' | 'constellation'
 
+export type SearchEngineId = 'default' | 'google' | 'bing' | 'baidu' | 'duckduckgo'
+
 export interface BackgroundPreset {
   id: string
   name: string
@@ -32,10 +34,11 @@ export interface BackgroundPreset {
 }
 
 export interface StarPageSettings {
-  version: 2
+  version: 3
   backgroundId: string
   visibleFolderIds: string[]
   bookmarkLayout: BookmarkLayout
+  searchEngineId: SearchEngineId
   showSeconds: boolean
   compactMode: boolean
   motionEnabled: boolean

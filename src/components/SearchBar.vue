@@ -2,6 +2,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useBookmarks } from '../composables/useBookmarks'
 import { useSearch } from '../composables/useSearch'
+import { useSettings } from '../composables/useSettings'
+import { getSearchEngine, SEARCH_ENGINES } from '../search/engines'
+import type { SearchEngineId } from '../types'
 import { bookmarkHostname, searchBookmarks } from '../utils/bookmarks'
 import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
@@ -10,12 +13,20 @@ const root = ref<HTMLElement>()
 const input = ref<HTMLInputElement>()
 const { query, feedback, searching, submitSearch } = useSearch()
 const { bookmarkTree } = useBookmarks()
+const { settings, updateSettings } = useSettings()
 const focused = ref(false)
 const suggestionsDismissed = ref(false)
 const activeIndex = ref(-1)
+const engineMenuOpen = ref(false)
+const selectedEngine = computed(() => getSearchEngine(settings.value.searchEngineId))
 const suggestions = computed(() => searchBookmarks(bookmarkTree.value, query.value, 7))
 const showSuggestions = computed(
-  () => focused.value && !suggestionsDismissed.value && Boolean(query.value.trim()) && suggestions.value.length > 0,
+  () =>
+    focused.value &&
+    !engineMenuOpen.value &&
+    !suggestionsDismissed.value &&
+    Boolean(query.value.trim()) &&
+    suggestions.value.length > 0,
 )
 const activeSuggestion = computed(() => suggestions.value[activeIndex.value])
 const activeDescendant = computed(() =>
@@ -42,17 +53,36 @@ async function handleSubmit() {
   }
 
   suggestionsDismissed.value = true
-  await submitSearch()
+  await submitSearch(settings.value.searchEngineId)
 }
 
 function handleEscape() {
+  if (engineMenuOpen.value) {
+    engineMenuOpen.value = false
+    return
+  }
   activeIndex.value = -1
   suggestionsDismissed.value = true
 }
 
+function toggleEngineMenu() {
+  engineMenuOpen.value = !engineMenuOpen.value
+  if (engineMenuOpen.value) activeIndex.value = -1
+}
+
+async function selectEngine(engineId: SearchEngineId) {
+  engineMenuOpen.value = false
+  await updateSettings({ searchEngineId: engineId })
+  await nextTick()
+  input.value?.focus()
+}
+
 function handleFocusOut(event: FocusEvent) {
   const nextTarget = event.relatedTarget
-  if (!(nextTarget instanceof Node) || !root.value?.contains(nextTarget)) focused.value = false
+  if (!(nextTarget instanceof Node) || !root.value?.contains(nextTarget)) {
+    focused.value = false
+    engineMenuOpen.value = false
+  }
 }
 
 function handleShortcut(event: KeyboardEvent) {
@@ -88,7 +118,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         name="q"
         autocomplete="off"
         spellcheck="false"
-        aria-label="使用默认搜索引擎搜索"
+        :aria-label="`搜索书签或使用${selectedEngine.name}搜索网页`"
         role="combobox"
         aria-autocomplete="list"
         aria-controls="bookmark-search-suggestions"
@@ -99,7 +129,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         @keydown.up.prevent="moveSelection(-1)"
         @keydown.esc.prevent="handleEscape"
       />
-      <span class="search-bar__engine">{{ activeSuggestion ? '打开书签' : '默认搜索' }}</span>
+      <button
+        type="button"
+        class="search-bar__engine"
+        :class="{ 'search-bar__engine--open': engineMenuOpen }"
+        :aria-label="`搜索引擎：${selectedEngine.name}`"
+        aria-haspopup="listbox"
+        aria-controls="search-engine-options"
+        :aria-expanded="engineMenuOpen"
+        @click="toggleEngineMenu"
+        @keydown.esc.stop.prevent="engineMenuOpen = false"
+      >
+        <span class="search-engine__mark" :style="{ color: selectedEngine.accent }">{{ selectedEngine.mark }}</span>
+        <span class="search-bar__engine-name">{{ selectedEngine.shortName }}</span>
+        <span class="search-bar__engine-caret" aria-hidden="true"></span>
+      </button>
       <button
         type="submit"
         class="search-bar__submit"
@@ -109,6 +153,33 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         <span>↵</span>
       </button>
     </form>
+    <Transition name="suggestions">
+      <ul
+        v-if="engineMenuOpen"
+        id="search-engine-options"
+        class="search-engine-menu"
+        role="listbox"
+        aria-label="选择搜索引擎"
+      >
+        <li v-for="engine in SEARCH_ENGINES" :key="engine.id" role="presentation">
+          <button
+            type="button"
+            class="search-engine-option"
+            :class="{ 'search-engine-option--active': engine.id === settings.searchEngineId }"
+            role="option"
+            :aria-selected="engine.id === settings.searchEngineId"
+            @click="selectEngine(engine.id)"
+          >
+            <span class="search-engine-option__mark" :style="{ color: engine.accent }">{{ engine.mark }}</span>
+            <span class="search-engine-option__copy">
+              <strong>{{ engine.name }}</strong>
+              <small>{{ engine.description }}</small>
+            </span>
+            <span v-if="engine.id === settings.searchEngineId" class="search-engine-option__selected" aria-hidden="true"></span>
+          </button>
+        </li>
+      </ul>
+    </Transition>
     <Transition name="suggestions">
       <ul
         v-if="showSuggestions"

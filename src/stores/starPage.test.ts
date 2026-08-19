@@ -37,6 +37,7 @@ describe('star page store', () => {
     await firstStore.updateSettings({
       backgroundId: 'violet-orbit',
       bookmarkLayout: 'constellation',
+      searchEngineId: 'duckduckgo',
       showSeconds: false,
     })
     expect(firstStore.settingsSaveState).toBe('saved')
@@ -47,6 +48,7 @@ describe('star page store', () => {
 
     expect(restoredStore.settings.backgroundId).toBe('violet-orbit')
     expect(restoredStore.settings.bookmarkLayout).toBe('constellation')
+    expect(restoredStore.settings.searchEngineId).toBe('duckduckgo')
     expect(restoredStore.settings.showSeconds).toBe(false)
   })
 

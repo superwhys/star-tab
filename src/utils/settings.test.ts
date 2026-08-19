@@ -12,16 +12,18 @@ describe('settings migration', () => {
       backgroundId: 'violet-orbit',
       visibleFolderIds: ['1', 2, null, '110'],
       bookmarkLayout: 'constellation',
+      searchEngineId: 'bing',
       showSeconds: false,
       compactMode: true,
       motionEnabled: false,
     })
 
     expect(result).toEqual({
-      version: 2,
+      version: 3,
       backgroundId: 'violet-orbit',
       visibleFolderIds: ['1', '110'],
       bookmarkLayout: 'constellation',
+      searchEngineId: 'bing',
       showSeconds: false,
       compactMode: true,
       motionEnabled: false,
@@ -35,5 +37,10 @@ describe('settings migration', () => {
   it('migrates old settings to the grid layout and rejects unknown layouts', () => {
     expect(sanitizeSettings({ version: 1 }).bookmarkLayout).toBe('grid')
     expect(sanitizeSettings({ bookmarkLayout: 'list' }).bookmarkLayout).toBe('grid')
+  })
+
+  it('migrates old settings to the browser default engine and rejects unknown engines', () => {
+    expect(sanitizeSettings({ version: 2 }).searchEngineId).toBe('default')
+    expect(sanitizeSettings({ searchEngineId: 'unknown' }).searchEngineId).toBe('default')
   })
 })

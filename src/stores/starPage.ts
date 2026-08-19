@@ -76,7 +76,7 @@ export const useStarPageStore = defineStore('star-page', () => {
   }
 
   async function updateSettings(patch: Partial<Omit<StarPageSettings, 'version'>>) {
-    settings.value = sanitizeSettings({ ...settings.value, ...patch, version: 2 })
+    settings.value = sanitizeSettings({ ...settings.value, ...patch, version: 3 })
     settingsExisted = true
     await persistSettings(settings.value)
   }
