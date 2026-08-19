@@ -7,6 +7,7 @@ import {
   findDefaultBookmarkFolder,
   flattenFolders,
   normalizeBookmarkTree,
+  searchBookmarks,
 } from './bookmarks'
 
 describe('bookmark utilities', () => {
@@ -51,5 +52,15 @@ describe('bookmark utilities', () => {
     expect(bookmarkInitial('知乎')).toBe('知')
     expect(bookmarkHostname('https://www.github.com/openai')).toBe('github.com')
     expect(bookmarkHostname('not a url')).toBe('')
+  })
+
+  it('searches every nested bookmark and ranks title matches first', () => {
+    expect(searchBookmarks(MOCK_BOOKMARK_TREE, 'Vue').map((node) => node.title)).toEqual(['Vue.js'])
+    expect(searchBookmarks(MOCK_BOOKMARK_TREE, 'mozilla').map((node) => node.title)).toEqual(['MDN'])
+    expect(searchBookmarks(MOCK_BOOKMARK_TREE, 'Git', 2).map((node) => node.title)).toEqual([
+      'GitHub',
+      'GitHub',
+    ])
+    expect(searchBookmarks(MOCK_BOOKMARK_TREE, '开发工具')).toEqual([])
   })
 })

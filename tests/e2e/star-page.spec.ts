@@ -6,10 +6,43 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('search prototype gives visible feedback', async ({ page }) => {
-  const search = page.getByRole('searchbox', { name: '使用默认搜索引擎搜索' })
+  const search = page.getByRole('combobox', { name: '使用默认搜索引擎搜索' })
   await search.fill('Vue 3')
   await search.press('Enter')
   await expect(page.getByRole('status')).toContainText('原型模式')
+})
+
+test('searches bookmarks without overriding the default Enter behavior', async ({ page }) => {
+  const search = page.getByRole('combobox', { name: '使用默认搜索引擎搜索' })
+  await search.fill('Vue')
+
+  const option = page.getByRole('option', { name: /Vue\.js/ })
+  await expect(option).toBeVisible()
+  await expect(option).toHaveAttribute('href', 'https://vuejs.org')
+  await expect(search).not.toHaveAttribute('aria-activedescendant')
+
+  await search.press('Enter')
+  await expect(page.getByRole('status')).toContainText('默认搜索引擎搜索“Vue”')
+
+  await page.evaluate(() => {
+    document.addEventListener(
+      'click',
+      (event) => {
+        const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('.search-suggestion')
+        if (!link) return
+        event.preventDefault()
+        ;(window as typeof window & { openedBookmark?: string }).openedBookmark = link.href
+      },
+      true,
+    )
+  })
+
+  await search.fill('Vue.js')
+  await search.press('ArrowDown')
+  await expect(search).toHaveAttribute('aria-activedescendant', 'bookmark-search-option-0')
+  await search.press('Enter')
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { openedBookmark?: string }).openedBookmark))
+    .toBe('https://vuejs.org/')
 })
 
 test('blocks the context menu, page text selection and element dragging', async ({ page }) => {

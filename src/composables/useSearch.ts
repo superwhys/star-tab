@@ -1,4 +1,4 @@
-import { onBeforeUnmount, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { searchWithDefaultEngine } from '../services/browser'
 
 export function useSearch() {
@@ -27,8 +27,12 @@ export function useSearch() {
     }
   }
 
+  watch(query, () => {
+    feedback.value = ''
+    window.clearTimeout(feedbackTimer)
+  })
+
   onBeforeUnmount(() => window.clearTimeout(feedbackTimer))
 
   return { query, feedback, searching, submitSearch }
 }
-

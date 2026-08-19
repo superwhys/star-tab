@@ -63,6 +63,52 @@ export function flattenFolders(nodes: BookmarkNode[]): FolderOption[] {
   return result
 }
 
+export function searchBookmarks(nodes: BookmarkNode[], query: string, limit = 7): BookmarkNode[] {
+  const normalizedQuery = normalizeSearchText(query)
+  const terms = normalizedQuery.split(' ').filter(Boolean)
+  if (terms.length === 0 || limit <= 0) return []
+
+  const matches: Array<{ node: BookmarkNode; score: number; order: number }> = []
+  let order = 0
+
+  const visit = (items: BookmarkNode[]) => {
+    items.forEach((node) => {
+      if (node.type === 'bookmark' && node.url) {
+        const title = normalizeSearchText(node.title)
+        const hostname = normalizeSearchText(bookmarkHostname(node.url))
+        const url = normalizeSearchText(node.url)
+        const searchable = `${title} ${hostname} ${url}`
+
+        if (terms.every((term) => searchable.includes(term))) {
+          let score = 5
+          if (title === normalizedQuery) score = 0
+          else if (title.startsWith(normalizedQuery)) score = 1
+          else if (title.includes(normalizedQuery)) score = 2
+          else if (hostname.startsWith(normalizedQuery)) score = 3
+          else if (hostname.includes(normalizedQuery)) score = 4
+          matches.push({ node, score, order })
+        }
+        order += 1
+      }
+      if (node.children.length > 0) visit(node.children)
+    })
+  }
+
+  visit(nodes)
+  return matches
+    .sort((left, right) => left.score - right.score || left.order - right.order)
+    .slice(0, limit)
+    .map(({ node }) => node)
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
 export function bookmarkInitial(title: string): string {
   const trimmed = title.trim()
   if (!trimmed) return '·'
@@ -84,4 +130,3 @@ export function bookmarkAccent(value: string): string {
   const hash = Array.from(value).reduce((total, character) => total + character.charCodeAt(0), 0)
   return accents[hash % accents.length] ?? accents[0]
 }
-
