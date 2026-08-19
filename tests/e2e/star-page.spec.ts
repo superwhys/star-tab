@@ -1,0 +1,55 @@
+import { expect, test } from '@playwright/test'
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: '书签栏' })).toBeVisible()
+})
+
+test('search prototype gives visible feedback', async ({ page }) => {
+  const search = page.getByRole('searchbox', { name: '使用默认搜索引擎搜索' })
+  await search.fill('Vue 3')
+  await search.press('Enter')
+  await expect(page.getByRole('status')).toContainText('原型模式')
+})
+
+test('opens a folder, navigates deeper and closes it', async ({ page }) => {
+  await page.getByRole('button', { name: '打开文件夹 开发工具' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('button', { name: '打开文件夹 代码仓库' })).toBeVisible()
+  await page.getByRole('button', { name: '打开文件夹 代码仓库' }).click()
+  await expect(page.getByRole('button', { name: '代码仓库' })).toHaveAttribute('aria-current', 'page')
+  await page.getByRole('button', { name: '关闭文件夹' }).click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+})
+
+test('changes background and display preferences', async ({ page }) => {
+  await page.getByRole('button', { name: '打开设置' }).click()
+  await expect(page.getByRole('heading', { name: '星页设置' })).toBeVisible()
+
+  await page.getByRole('button', { name: /紫曜轨道/ }).click()
+  await expect(page.locator('.star-background')).toHaveClass(/background--violet-orbit/)
+
+  await page.getByText('显示秒数', { exact: true }).click()
+  await expect(page.locator('.clock__seconds')).toHaveCount(0)
+  await expect(page.getByText('设置已保存到本机')).toBeVisible()
+
+  await page.reload()
+  await expect(page.locator('.star-background')).toHaveClass(/background--violet-orbit/)
+  await expect(page.locator('.clock__seconds')).toHaveCount(0)
+})
+
+test('renders a visibly changing animated star layer for every background', async ({ page }) => {
+  const canvas = page.locator('.star-background__canvas')
+  await expect(canvas).toHaveAttribute('data-animated', 'true')
+  await page.getByRole('button', { name: '打开设置' }).click()
+
+  for (const name of ['星河流尘', '流星夜', '靛蓝星云', '紫曜轨道', '月海薄雾', '蓝星地平线']) {
+    await page.getByRole('button', { name: new RegExp(name) }).click()
+    await page.waitForTimeout(80)
+    const before = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL())
+    await page.waitForTimeout(420)
+    const after = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL())
+
+    expect(after, `${name} should animate`).not.toBe(before)
+  }
+})

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="night" x1="18" y1="14" x2="108" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#263A87"/>
+      <stop offset="1" stop-color="#090D2C"/>
+    </linearGradient>
+    <linearGradient id="star" x1="42" y1="26" x2="90" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#9CB8FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="32" fill="url(#night)"/>
+  <path d="M64 24L72.9 49.1L99 56.3L77.8 72.5L78.9 99L64 79.6L49.1 99L50.2 72.5L29 56.3L55.1 49.1L64 24Z" fill="url(#star)"/>
+  <circle cx="97" cy="31" r="4" fill="#C8D7FF"/>
+  <circle cx="28" cy="91" r="3" fill="#7CA8FF"/>
+</svg>
+
