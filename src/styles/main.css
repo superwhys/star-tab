@@ -22,6 +22,28 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#app,
+.app-shell {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+a,
+img,
+svg {
+  -webkit-user-drag: none;
+}
+
 html {
   min-width: 320px;
   min-height: 100%;

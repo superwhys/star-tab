@@ -8,8 +8,11 @@ import IconSymbol from './components/IconSymbol.vue'
 import SearchBar from './components/SearchBar.vue'
 import SettingsDrawer from './components/SettingsDrawer.vue'
 import StarBackground from './components/StarBackground.vue'
+import { usePageInteractionGuards } from './composables/usePageInteractionGuards'
 import { isExtensionRuntime } from './services/browser'
 import { useStarPageStore } from './stores/starPage'
+
+usePageInteractionGuards()
 
 const store = useStarPageStore()
 const { settings, settingsOpen, activeFolder } = storeToRefs(store)

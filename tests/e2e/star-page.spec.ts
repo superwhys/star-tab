@@ -12,6 +12,36 @@ test('search prototype gives visible feedback', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('原型模式')
 })
 
+test('blocks the context menu, page text selection and element dragging', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const target = document.querySelector('.brand')!
+    const search = document.querySelector('input[type="search"]')!
+    const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    const pageSelectionEvent = new Event('selectstart', { bubbles: true, cancelable: true })
+    const inputSelectionEvent = new Event('selectstart', { bubbles: true, cancelable: true })
+    const dragEvent = new DragEvent('dragstart', { bubbles: true, cancelable: true })
+
+    target.dispatchEvent(contextMenuEvent)
+    target.dispatchEvent(pageSelectionEvent)
+    search.dispatchEvent(inputSelectionEvent)
+    target.dispatchEvent(dragEvent)
+
+    return {
+      contextMenuBlocked: contextMenuEvent.defaultPrevented,
+      pageSelectionBlocked: pageSelectionEvent.defaultPrevented,
+      inputSelectionAllowed: !inputSelectionEvent.defaultPrevented,
+      dragBlocked: dragEvent.defaultPrevented,
+    }
+  })
+
+  expect(result).toEqual({
+    contextMenuBlocked: true,
+    pageSelectionBlocked: true,
+    inputSelectionAllowed: true,
+    dragBlocked: true,
+  })
+})
+
 test('opens a folder, navigates deeper and closes it', async ({ page }) => {
   await page.getByRole('button', { name: '打开文件夹 开发工具' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
