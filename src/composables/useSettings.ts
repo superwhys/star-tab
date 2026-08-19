@@ -13,5 +13,6 @@ export function useSettings() {
     settingsError,
     updateSettings: store.updateSettings,
     toggleFolderVisibility: store.toggleFolderVisibility,
+    moveVisibleFolder: store.moveVisibleFolder,
   }
 }

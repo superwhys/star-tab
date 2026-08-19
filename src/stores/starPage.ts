@@ -119,6 +119,18 @@ export const useStarPageStore = defineStore('star-page', () => {
     return updateSettings({ visibleFolderIds: [...selected] })
   }
 
+  function moveVisibleFolder(folderId: string, offset: -1 | 1): Promise<void> {
+    const orderedIds = [...settings.value.visibleFolderIds]
+    const currentIndex = orderedIds.indexOf(folderId)
+    const targetIndex = currentIndex + offset
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= orderedIds.length) return Promise.resolve()
+
+    const targetId = orderedIds[targetIndex]
+    orderedIds[targetIndex] = folderId
+    orderedIds[currentIndex] = targetId
+    return updateSettings({ visibleFolderIds: orderedIds })
+  }
+
   function openFolder(folder: BookmarkNode) {
     if (folder.type !== 'folder') return
     activeFolderPath.value = [folder]
@@ -159,6 +171,7 @@ export const useStarPageStore = defineStore('star-page', () => {
     refreshBookmarks,
     updateSettings,
     toggleFolderVisibility,
+    moveVisibleFolder,
     openFolder,
     enterFolder,
     navigateFolder,

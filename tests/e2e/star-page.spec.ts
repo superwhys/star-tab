@@ -101,6 +101,21 @@ test('changes background and display preferences', async ({ page }) => {
   await expect(page.locator('.clock__seconds')).toHaveCount(0)
 })
 
+test('reorders selected bookmark groups and restores the order after reload', async ({ page }) => {
+  await page.getByRole('button', { name: '打开设置' }).click()
+  await page.getByRole('checkbox', { name: /开发工具/ }).check()
+  await page.getByRole('checkbox', { name: /设计灵感/ }).check()
+
+  await page.getByRole('button', { name: '上移分组 设计灵感' }).click()
+  await expect(page.locator('.folder-order__title')).toHaveText(['书签栏', '设计灵感', '开发工具'])
+  await expect(page.getByText('设置已保存到本机')).toBeVisible()
+  await page.getByRole('button', { name: '关闭设置' }).click()
+
+  await expect(page.locator('.bookmark-section h2')).toHaveText(['书签栏', '设计灵感', '开发工具'])
+  await page.reload()
+  await expect(page.locator('.bookmark-section h2')).toHaveText(['书签栏', '设计灵感', '开发工具'])
+})
+
 test('renders a visibly changing animated star layer for every background', async ({ page }) => {
   const canvas = page.locator('.star-background__canvas')
   await expect(canvas).toHaveAttribute('data-animated', 'true')

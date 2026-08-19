@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { BACKGROUND_PRESETS } from '../backgrounds'
 import { useBackground } from '../composables/useBackground'
 import { useSettings } from '../composables/useSettings'
+import type { FolderOption } from '../types'
 import IconSymbol from './IconSymbol.vue'
 
 const {
@@ -13,8 +14,14 @@ const {
   settingsError,
   updateSettings,
   toggleFolderVisibility,
+  moveVisibleFolder,
 } = useSettings()
 const { prefersReducedMotion } = useBackground()
+const selectedFolderOptions = computed(() =>
+  settings.value.visibleFolderIds
+    .map((id) => folderOptions.value.find((folder) => folder.id === id))
+    .filter((folder): folder is FolderOption => Boolean(folder)),
+)
 
 function handleEscape(event: KeyboardEvent) {
   if (event.key === 'Escape' && settingsOpen.value) settingsOpen.value = false
@@ -117,7 +124,42 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
           <section class="settings-section">
             <div class="settings-section__heading">
               <h3>书签分组</h3>
-              <span>选择主页展示内容</span>
+              <span>选择并调整主页顺序</span>
+            </div>
+            <div v-if="selectedFolderOptions.length" class="folder-order">
+              <div class="folder-order__heading">
+                <strong>展示顺序</strong>
+                <span>从上到下排列</span>
+              </div>
+              <ol class="folder-order__list">
+                <li v-for="(folder, index) in selectedFolderOptions" :key="folder.id" class="folder-order__item">
+                  <span class="folder-order__index">{{ index + 1 }}</span>
+                  <IconSymbol name="folder" :size="16" />
+                  <span class="folder-order__title">{{ folder.title }}</span>
+                  <span class="folder-order__actions">
+                    <button
+                      type="button"
+                      :aria-label="`上移分组 ${folder.title}`"
+                      :disabled="index === 0"
+                      @click="moveVisibleFolder(folder.id, -1)"
+                    >
+                      <span aria-hidden="true">↑</span>
+                    </button>
+                    <button
+                      type="button"
+                      :aria-label="`下移分组 ${folder.title}`"
+                      :disabled="index === selectedFolderOptions.length - 1"
+                      @click="moveVisibleFolder(folder.id, 1)"
+                    >
+                      <span aria-hidden="true">↓</span>
+                    </button>
+                  </span>
+                </li>
+              </ol>
+            </div>
+            <div class="folder-options__heading">
+              <strong>选择分组</strong>
+              <span>新选择的分组添加到末尾</span>
             </div>
             <div class="folder-options">
               <label

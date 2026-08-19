@@ -44,4 +44,19 @@ describe('star page store', () => {
     expect(restoredStore.settings.backgroundId).toBe('violet-orbit')
     expect(restoredStore.settings.showSeconds).toBe(false)
   })
+
+  it('reorders visible folders and persists their homepage order', async () => {
+    const firstStore = useStarPageStore()
+    await firstStore.init()
+    await firstStore.updateSettings({ visibleFolderIds: ['1', '110', '120'] })
+    await firstStore.moveVisibleFolder('120', -1)
+
+    expect(firstStore.settings.visibleFolderIds).toEqual(['1', '120', '110'])
+    expect(firstStore.visibleSections.map((section) => section.id)).toEqual(['1', '120', '110'])
+
+    setActivePinia(createPinia())
+    const restoredStore = useStarPageStore()
+    await restoredStore.init()
+    expect(restoredStore.settings.visibleFolderIds).toEqual(['1', '120', '110'])
+  })
 })
