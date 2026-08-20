@@ -1166,7 +1166,7 @@ input:focus-visible {
 .bookmark-tile > .favicon,
 .bookmark-tile > .folder-preview {
   transform: translate3d(var(--dock-shift, 0px), var(--dock-lift, 0px), 0) scale(var(--dock-scale, 1));
-  transform-origin: center center;
+  transform-origin: center bottom;
   filter:
     brightness(calc(1 + var(--dock-emphasis, 0) * 0.16))
     saturate(calc(1 + var(--dock-emphasis, 0) * 0.12));
@@ -1180,7 +1180,10 @@ input:focus-visible {
 .bookmark-grid--dock-tracking .bookmark-tile > .favicon,
 .bookmark-grid--dock-tracking .bookmark-tile > .folder-preview,
 .bookmark-grid--dock-tracking .bookmark-tile__title {
-  transition: transform 70ms linear, filter 120ms ease, box-shadow 120ms ease;
+  transition:
+    transform 90ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 140ms ease-out,
+    box-shadow 140ms ease-out;
   will-change: transform;
 }
 
@@ -1188,9 +1191,9 @@ input:focus-visible {
 .bookmark-grid--dock-settling .bookmark-tile > .folder-preview,
 .bookmark-grid--dock-settling .bookmark-tile__title {
   transition:
-    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
-    filter 280ms ease,
-    box-shadow 280ms ease;
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 240ms ease,
+    box-shadow 240ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {

@@ -19,10 +19,9 @@ const FINE_POINTER_QUERY = '(hover: hover) and (pointer: fine)'
 const REDUCE_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 const ROW_BUCKET = 12
 
-export const DOCK_MAX_SCALE = 1.48
-export const DOCK_RANGE_X_RATIO = 2.55
-export const DOCK_RANGE_Y_RATIO = 0.92
-export const DOCK_LIFT_RATIO = 26
+export const DOCK_MAX_SCALE = 1.82
+export const DOCK_RANGE_X_RATIO = 3.75
+export const DOCK_LIFT_RATIO = 4
 export const DOCK_LIVE_CLASS = 'bookmark-grid--dock-live'
 export const DOCK_SETTLING_CLASS = 'bookmark-grid--dock-settling'
 export const DOCK_TRACKING_CLASS = 'bookmark-grid--dock-tracking'
@@ -82,6 +81,30 @@ export function groupDockTilesByRow(targets: DockTileTarget[]): DockTileTarget[]
 }
 
 /**
+ * 宫格有多行时，只让离指针最近的一行产生波峰。
+ * macOS 程序坞的倍率只跟横向位置变化；锁定行可以避免鼠标在图标内上下移动时忽大忽小。
+ */
+export function findActiveDockRow(
+  rows: DockTileTarget[][],
+  pointer: DockPointer,
+): DockTileTarget[] | undefined {
+  let activeRow: DockTileTarget[] | undefined
+  let closestDistance = Number.POSITIVE_INFINITY
+
+  for (const row of rows) {
+    if (!row.length) continue
+    const rowY = row.reduce((total, target) => total + target.y, 0) / row.length
+    const distance = Math.abs(pointer.y - rowY)
+    if (distance < closestDistance) {
+      activeRow = row
+      closestDistance = distance
+    }
+  }
+
+  return activeRow
+}
+
+/**
  * 根据放大后多出的宽度，把同一行图标从指针处向两侧推开。
  */
 export function computeDockRowShifts(row: DockTileTarget[], scales: number[]): number[] {
@@ -111,11 +134,10 @@ function writeDockStyle(tile: HTMLElement, scale: number, shift: number, lift: n
 export function applyDockMagnify(
   targets: DockTileTarget[],
   pointer: DockPointer | null,
-  options: { maxScale?: number; rangeXRatio?: number; rangeYRatio?: number; liftRatio?: number } = {},
+  options: { maxScale?: number; rangeXRatio?: number; liftRatio?: number } = {},
 ): void {
   const maxScale = options.maxScale ?? DOCK_MAX_SCALE
   const rangeXRatio = options.rangeXRatio ?? DOCK_RANGE_X_RATIO
-  const rangeYRatio = options.rangeYRatio ?? DOCK_RANGE_Y_RATIO
   const liftRatio = options.liftRatio ?? DOCK_LIFT_RATIO
 
   if (!pointer) {
@@ -123,20 +145,18 @@ export function applyDockMagnify(
     return
   }
 
+  const rows = groupDockTilesByRow(targets)
+  const activeRow = findActiveDockRow(rows, pointer)
+  const activeTiles = new Set(activeRow?.map((target) => target.tile))
   const scales = targets.map((target) => {
+    if (!activeTiles.has(target.tile)) return 1
     const rangeX = Math.max(target.size * rangeXRatio, 1)
-    const rangeY = Math.max(target.size * rangeYRatio, 1)
-    return (
-      1 +
-      (maxScale - 1) *
-        computeDockFalloff(Math.abs(pointer.x - target.x), rangeX) *
-        computeDockFalloff(Math.abs(pointer.y - target.y), rangeY)
-    )
+    return computeDockScale(Math.abs(pointer.x - target.x), rangeX, maxScale)
   })
 
   const scaleByTile = new Map(targets.map((target, index) => [target.tile, scales[index]]))
   const shiftByTile = new Map<HTMLElement, number>()
-  for (const row of groupDockTilesByRow(targets)) {
+  for (const row of rows) {
     const rowScales = row.map((target) => scaleByTile.get(target.tile) ?? 1)
     const shifts = computeDockRowShifts(row, rowScales)
     row.forEach((target, index) => shiftByTile.set(target.tile, shifts[index]))

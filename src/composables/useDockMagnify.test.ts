@@ -9,6 +9,7 @@ import {
   computeDockScale,
   DOCK_LIVE_CLASS,
   DOCK_MAX_SCALE,
+  findActiveDockRow,
   readDockTileMetrics,
   useDockMagnify,
 } from './useDockMagnify'
@@ -74,6 +75,15 @@ describe('computeDockRowShifts', () => {
   })
 })
 
+describe('findActiveDockRow', () => {
+  it('locks magnification to the row nearest the pointer', () => {
+    const upper = [{ tile: document.createElement('button'), x: 50, y: 40, size: 64 }]
+    const lower = [{ tile: document.createElement('button'), x: 50, y: 170, size: 64 }]
+
+    expect(findActiveDockRow([upper, lower], { x: 50, y: 135 })).toBe(lower)
+  })
+})
+
 describe('applyDockMagnify', () => {
   afterEach(() => {
     document.body.innerHTML = ''
@@ -122,6 +132,19 @@ describe('applyDockMagnify', () => {
 
     expect(Number(hovered.style.getPropertyValue('--dock-scale'))).toBeCloseTo(DOCK_MAX_SCALE, 2)
     expect(Number(below.style.getPropertyValue('--dock-scale'))).toBe(1)
+  })
+
+  it('keeps a stable scale while the pointer moves vertically within a row', () => {
+    const tile = createTile(0, 0)
+    const targets = [{ tile, x: 50, y: 39, size: 64 }]
+
+    applyDockMagnify(targets, { x: 50, y: 8 })
+    const scaleAtTop = Number(tile.style.getPropertyValue('--dock-scale'))
+    applyDockMagnify(targets, { x: 50, y: 72 })
+    const scaleAtBottom = Number(tile.style.getPropertyValue('--dock-scale'))
+
+    expect(scaleAtTop).toBeCloseTo(DOCK_MAX_SCALE, 2)
+    expect(scaleAtBottom).toBeCloseTo(scaleAtTop, 4)
   })
 
   it('resets every tile when the pointer leaves', () => {
