@@ -5,7 +5,7 @@ import { useSearch } from '../composables/useSearch'
 import { useSettings } from '../composables/useSettings'
 import { getSearchEngine, SEARCH_ENGINES } from '../search/engines'
 import type { BookmarkSearchState, SearchEngineId } from '../types'
-import { bookmarkHostname, searchBookmarks } from '../utils/bookmarks'
+import { bookmarkHostname, searchBookmarks, splitSearchHighlight } from '../utils/bookmarks'
 import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
 
@@ -32,7 +32,7 @@ const showSuggestions = computed(
     Boolean(query.value.trim()) &&
     suggestions.value.length > 0,
 )
-const activeSuggestion = computed(() => suggestions.value[activeIndex.value])
+const activeSuggestion = computed(() => suggestions.value[activeIndex.value]?.node)
 const activeDescendant = computed(() =>
   activeSuggestion.value ? suggestionId(activeIndex.value) : undefined,
 )
@@ -40,8 +40,8 @@ const constellationSearchState = computed<BookmarkSearchState>(() => {
   const enabled = Boolean(query.value.trim()) && !suggestionsDismissed.value
   return {
     query: enabled ? query.value.trim() : '',
-    matchIds: enabled ? suggestions.value.map((bookmark) => bookmark.id) : [],
-    matches: enabled ? suggestions.value : [],
+    matchIds: enabled ? suggestions.value.map(({ node }) => node.id) : [],
+    matches: enabled ? suggestions.value.map(({ node }) => node) : [],
     activeId: enabled ? activeSuggestion.value?.id : undefined,
   }
 })
@@ -211,7 +211,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         role="listbox"
         aria-label="匹配的书签"
       >
-        <li v-for="(bookmark, index) in suggestions" :key="bookmark.id">
+        <li v-for="({ node: bookmark, folderPath }, index) in suggestions" :key="bookmark.id">
           <a
             :id="suggestionId(index)"
             class="search-suggestion"
@@ -224,8 +224,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
           >
             <FaviconImage :title="bookmark.title" :url="bookmark.url" :size="34" subtle />
             <span class="search-suggestion__copy">
-              <strong>{{ bookmark.title }}</strong>
-              <small>{{ bookmarkHostname(bookmark.url) }}</small>
+              <strong>
+                <template v-for="(segment, segmentIndex) in splitSearchHighlight(bookmark.title, query)" :key="segmentIndex">
+                  <mark v-if="segment.matched">{{ segment.text }}</mark>
+                  <template v-else>{{ segment.text }}</template>
+                </template>
+              </strong>
+              <small class="search-suggestion__metadata">
+                <span v-if="folderPath.length" class="search-suggestion__path">{{ folderPath.join(' / ') }}</span>
+                <span>
+                  <template v-for="(segment, segmentIndex) in splitSearchHighlight(bookmarkHostname(bookmark.url), query)" :key="segmentIndex">
+                    <mark v-if="segment.matched">{{ segment.text }}</mark>
+                    <template v-else>{{ segment.text }}</template>
+                  </template>
+                </span>
+              </small>
             </span>
             <span class="search-suggestion__hint">打开 ↵</span>
           </a>
@@ -237,3 +250,34 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
     </Transition>
   </div>
 </template>
+
+<style scoped>
+.search-suggestion mark {
+  padding: 0;
+  border-radius: 3px;
+  background: rgba(132, 164, 255, 0.22);
+  color: #f8faff;
+}
+
+.search-suggestion__metadata {
+  display: flex;
+  min-width: 0;
+  gap: 7px;
+}
+
+.search-suggestion__metadata > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-suggestion__path {
+  color: rgba(214, 224, 255, 0.62);
+}
+
+.search-suggestion__path::after {
+  margin-left: 7px;
+  color: rgba(211, 220, 249, 0.25);
+  content: '·';
+}
+</style>

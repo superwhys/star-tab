@@ -19,6 +19,8 @@ test('searches bookmarks without overriding the default Enter behavior', async (
   const option = page.getByRole('option', { name: /Vue\.js/ })
   await expect(option).toBeVisible()
   await expect(option).toHaveAttribute('href', 'https://vuejs.org')
+  await expect(option.locator('mark')).toHaveText(['Vue', 'vue'])
+  await expect(option).toContainText('书签栏 / 开发工具')
   await expect(search).not.toHaveAttribute('aria-activedescendant')
 
   await search.press('Enter')

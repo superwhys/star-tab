@@ -32,6 +32,16 @@ export interface BookmarkSearchState {
   activeId?: string
 }
 
+export interface BookmarkSearchResult {
+  node: BookmarkNode
+  folderPath: string[]
+}
+
+export interface SearchHighlightSegment {
+  text: string
+  matched: boolean
+}
+
 export interface BackgroundPreset {
   id: string
   name: string

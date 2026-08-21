@@ -1,4 +1,9 @@
-import type { BookmarkNode, FolderOption } from '../types'
+import type {
+  BookmarkNode,
+  BookmarkSearchResult,
+  FolderOption,
+  SearchHighlightSegment,
+} from '../types'
 
 type ChromeBookmarkNode = chrome.bookmarks.BookmarkTreeNode & {
   folderType?: BookmarkNode['folderType']
@@ -63,15 +68,15 @@ export function flattenFolders(nodes: BookmarkNode[]): FolderOption[] {
   return result
 }
 
-export function searchBookmarks(nodes: BookmarkNode[], query: string, limit = 7): BookmarkNode[] {
+export function searchBookmarks(nodes: BookmarkNode[], query: string, limit = 7): BookmarkSearchResult[] {
   const normalizedQuery = normalizeSearchText(query)
   const terms = normalizedQuery.split(' ').filter(Boolean)
   if (terms.length === 0 || limit <= 0) return []
 
-  const matches: Array<{ node: BookmarkNode; score: number; order: number }> = []
+  const matches: Array<BookmarkSearchResult & { score: number; order: number }> = []
   let order = 0
 
-  const visit = (items: BookmarkNode[]) => {
+  const visit = (items: BookmarkNode[], folderPath: string[]) => {
     items.forEach((node) => {
       if (node.type === 'bookmark' && node.url) {
         const title = normalizeSearchText(node.title)
@@ -86,19 +91,38 @@ export function searchBookmarks(nodes: BookmarkNode[], query: string, limit = 7)
           else if (title.includes(normalizedQuery)) score = 2
           else if (hostname.startsWith(normalizedQuery)) score = 3
           else if (hostname.includes(normalizedQuery)) score = 4
-          matches.push({ node, score, order })
+          matches.push({ node, folderPath, score, order })
         }
         order += 1
       }
-      if (node.children.length > 0) visit(node.children)
+      if (node.children.length > 0) {
+        visit(node.children, node.title ? [...folderPath, node.title] : folderPath)
+      }
     })
   }
 
-  visit(nodes)
+  visit(nodes, [])
   return matches
     .sort((left, right) => left.score - right.score || left.order - right.order)
     .slice(0, limit)
-    .map(({ node }) => node)
+    .map(({ node, folderPath }) => ({ node, folderPath }))
+}
+
+export function splitSearchHighlight(value: string, query: string): SearchHighlightSegment[] {
+  const terms = Array.from(
+    new Set(query.trim().split(/\s+/).filter(Boolean).sort((left, right) => right.length - left.length)),
+  )
+  if (terms.length === 0) return [{ text: value, matched: false }]
+
+  const matcher = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'giu')
+  return value
+    .split(matcher)
+    .filter(Boolean)
+    .map((text) => ({ text, matched: terms.some((term) => term.toLocaleLowerCase() === text.toLocaleLowerCase()) }))
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function normalizeSearchText(value: string): string {
