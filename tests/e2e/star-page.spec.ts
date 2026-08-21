@@ -5,6 +5,17 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: '书签栏' })).toBeVisible()
 })
 
+test('keeps the layout and add buttons on one row', async ({ page }) => {
+  const layoutButton = page.getByRole('button', { name: '切换到 3D 星球布局' })
+  const addButton = page.getByRole('button', { name: '在书签栏新增书签' })
+  const [layoutBox, addBox] = await Promise.all([layoutButton.boundingBox(), addButton.boundingBox()])
+
+  expect(layoutBox).not.toBeNull()
+  expect(addBox).not.toBeNull()
+  expect(layoutBox!.x + layoutBox!.width).toBeLessThanOrEqual(addBox!.x)
+  expect(Math.abs((layoutBox!.y + layoutBox!.height / 2) - (addBox!.y + addBox!.height / 2))).toBeLessThan(2)
+})
+
 test('search prototype gives visible feedback', async ({ page }) => {
   const search = page.getByPlaceholder('搜索书签或网页…')
   await search.fill('Vue 3')

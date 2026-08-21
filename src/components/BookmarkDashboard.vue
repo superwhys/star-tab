@@ -29,18 +29,6 @@ function handleFolder(node: BookmarkNode) {
     class="bookmark-dashboard"
     :class="{ 'bookmark-dashboard--constellation': layout === 'constellation' }"
   >
-    <button
-      v-if="!loading && !bookmarkError && visibleSections.length && layout !== 'constellation'"
-      type="button"
-      class="bookmark-layout-shortcut"
-      aria-label="切换到 3D 星球布局"
-      title="切换到 3D 星球"
-      @click="emit('changeLayout', 'constellation')"
-    >
-      <span aria-hidden="true">◉</span>
-      3D 星球
-    </button>
-
     <div v-if="loading" class="bookmark-skeleton" aria-label="正在加载书签">
       <span v-for="index in 8" :key="index"></span>
     </div>
@@ -64,11 +52,13 @@ function handleFolder(node: BookmarkNode) {
 
     <template v-else-if="visibleSections.length">
       <BookmarkSection
-        v-for="section in visibleSections"
+        v-for="(section, index) in visibleSections"
         :key="section.id"
         :section="section"
         :compact="compact"
+        :show-layout-shortcut="index === 0"
         @open-folder="handleFolder"
+        @change-layout="emit('changeLayout', 'constellation')"
       />
     </template>
 
