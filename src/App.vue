@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import BookmarkDashboard from './components/BookmarkDashboard.vue'
 import BookmarkContextMenu from './components/BookmarkContextMenu.vue'
+import BookmarkEditorDialog from './components/BookmarkEditorDialog.vue'
 import ClockDisplay from './components/ClockDisplay.vue'
 import FolderOverlay from './components/FolderOverlay.vue'
 import IconSymbol from './components/IconSymbol.vue'
@@ -11,6 +12,7 @@ import SettingsDrawer from './components/SettingsDrawer.vue'
 import StarBackground from './components/StarBackground.vue'
 import { usePageInteractionGuards } from './composables/usePageInteractionGuards'
 import { useBookmarkContextMenu } from './composables/useBookmarkContextMenu'
+import { useBookmarkEditor } from './composables/useBookmarkEditor'
 import { isExtensionRuntime } from './services/browser'
 import { useStarPageStore } from './stores/starPage'
 import type { BookmarkLayout, BookmarkSearchState } from './types'
@@ -19,13 +21,15 @@ usePageInteractionGuards()
 
 const store = useStarPageStore()
 const { contextMenu, closeContextMenu } = useBookmarkContextMenu()
+const { editorState, closeBookmarkEditor } = useBookmarkEditor()
 const { settings, settingsOpen, activeFolder } = storeToRefs(store)
 const prototypeMode = computed(() => !isExtensionRuntime())
 const bookmarkSearchState = ref<BookmarkSearchState>({ query: '', matchIds: [] })
 
 function handleEscape(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
-  if (contextMenu.value) closeContextMenu()
+  if (editorState.value) closeBookmarkEditor()
+  else if (contextMenu.value) closeContextMenu()
   else if (activeFolder.value) store.closeFolder()
   else if (settingsOpen.value) settingsOpen.value = false
 }
@@ -45,7 +49,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
   <div
     class="app-shell"
     :class="{
-      'app-shell--dialog-open': activeFolder || settingsOpen,
+      'app-shell--dialog-open': activeFolder || settingsOpen || editorState,
       'app-shell--motion': settings.motionEnabled,
     }"
     data-screen-label="星页主页"
@@ -84,5 +88,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
     <FolderOverlay />
     <SettingsDrawer />
     <BookmarkContextMenu />
+    <BookmarkEditorDialog />
   </div>
 </template>

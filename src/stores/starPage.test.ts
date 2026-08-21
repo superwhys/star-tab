@@ -66,4 +66,24 @@ describe('star page store', () => {
     await restoredStore.init()
     expect(restoredStore.settings.visibleFolderIds).toEqual(['1', '120', '110'])
   })
+
+  it('creates, edits and deletes bookmarks while keeping folders refreshed', async () => {
+    const store = useStarPageStore()
+    await store.init()
+    const readingList = findBookmarkNode(store.bookmarkTree, '140')!
+    store.openFolder(readingList)
+
+    await store.createBookmark('140', 'Example', 'https://example.com/')
+    const created = store.activeFolder?.children.find((node) => node.title === 'Example')
+    expect(created?.url).toBe('https://example.com/')
+
+    await store.updateBookmark(created!.id, 'Updated Example', 'https://example.org/')
+    expect(store.activeFolder?.children.find((node) => node.id === created!.id)).toMatchObject({
+      title: 'Updated Example',
+      url: 'https://example.org/',
+    })
+
+    await store.deleteBookmark(created!.id)
+    expect(store.activeFolder?.children.some((node) => node.id === created!.id)).toBe(false)
+  })
 })

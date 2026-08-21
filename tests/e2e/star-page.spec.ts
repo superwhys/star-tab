@@ -138,6 +138,33 @@ test('opens a custom context menu for bookmarks and folders', async ({ page }) =
   await expect(folderMenu.getByRole('menuitem', { name: '打开文件夹' })).toBeVisible()
 })
 
+test('creates, edits and deletes a bookmark', async ({ page }) => {
+  await page.getByRole('button', { name: '在书签栏新增书签' }).click()
+  const createDialog = page.getByRole('dialog', { name: '新增书签' })
+  await createDialog.getByLabel('名称').fill('Example Site')
+  await createDialog.getByLabel('网址').fill('example.com/docs')
+  await createDialog.getByRole('button', { name: '新增书签' }).click()
+
+  const createdBookmark = page.getByRole('link', { name: '打开 Example Site' })
+  await expect(createdBookmark).toHaveAttribute('href', 'https://example.com/docs')
+
+  await createdBookmark.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: '编辑书签' }).click()
+  const editDialog = page.getByRole('dialog', { name: '编辑书签' })
+  await editDialog.getByLabel('名称').fill('Updated Site')
+  await editDialog.getByLabel('网址').fill('updated.example.com')
+  await editDialog.getByRole('button', { name: '保存修改' }).click()
+
+  const updatedBookmark = page.getByRole('link', { name: '打开 Updated Site' })
+  await expect(updatedBookmark).toHaveAttribute('href', 'https://updated.example.com/')
+
+  await updatedBookmark.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: '删除书签' }).click()
+  const deleteDialog = page.getByRole('dialog', { name: '删除书签' })
+  await deleteDialog.getByRole('button', { name: '确认删除' }).click()
+  await expect(updatedBookmark).toBeHidden()
+})
+
 test('blocks the context menu, page text selection and element dragging', async ({ page }) => {
   const result = await page.evaluate(() => {
     const target = document.querySelector('.brand')!

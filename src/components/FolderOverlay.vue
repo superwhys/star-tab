@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useBookmarks } from '../composables/useBookmarks'
+import { useBookmarkEditor } from '../composables/useBookmarkEditor'
 import BookmarkGrid from './BookmarkGrid.vue'
 import IconSymbol from './IconSymbol.vue'
 
@@ -11,9 +12,10 @@ const {
   navigateFolder,
   closeFolder,
 } = useBookmarks()
+const { editorState, openCreateBookmark } = useBookmarkEditor()
 
 function handleEscape(event: KeyboardEvent) {
-  if (event.key === 'Escape' && activeFolder.value) closeFolder()
+  if (event.key === 'Escape' && activeFolder.value && !editorState.value) closeFolder()
 }
 
 onMounted(() => window.addEventListener('keydown', handleEscape))
@@ -58,6 +60,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
               </template>
             </nav>
 
+            <button
+              type="button"
+              class="folder-dialog__add-bookmark"
+              :aria-label="`在${activeFolder.title}新增书签`"
+              @click="openCreateBookmark(activeFolder)"
+            >
+              ＋ 新增书签
+            </button>
             <button type="button" class="icon-button icon-button--quiet" aria-label="关闭文件夹" @click="closeFolder">
               <IconSymbol name="close" />
             </button>
@@ -81,3 +91,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.folder-dialog__add-bookmark {
+  padding: 7px 10px;
+  border: 1px solid rgba(205, 217, 255, 0.12);
+  border-radius: 9px;
+  background: rgba(134, 157, 224, 0.08);
+  color: rgba(224, 232, 255, 0.68);
+  font: inherit;
+  font-size: 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+</style>

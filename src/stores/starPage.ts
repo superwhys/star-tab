@@ -1,7 +1,15 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { BookmarkNode, SettingsSaveState, StarPageSettings } from '../types'
-import { readBookmarks, readSettings, subscribeBookmarkChanges, writeSettings } from '../services/browser'
+import {
+  createBookmark as createBrowserBookmark,
+  deleteBookmark as deleteBrowserBookmark,
+  readBookmarks,
+  readSettings,
+  subscribeBookmarkChanges,
+  updateBookmark as updateBrowserBookmark,
+  writeSettings,
+} from '../services/browser'
 import { findBookmarkNode, findDefaultBookmarkFolder, flattenFolders } from '../utils/bookmarks'
 import { DEFAULT_SETTINGS, sanitizeSettings } from '../utils/settings'
 
@@ -59,7 +67,11 @@ export const useStarPageStore = defineStore('star-page', () => {
 
   async function refreshBookmarks() {
     try {
+      const openFolderIds = activeFolderPath.value.map((folder) => folder.id)
       bookmarkTree.value = await readBookmarks()
+      activeFolderPath.value = openFolderIds
+        .map((id) => findBookmarkNode(bookmarkTree.value, id))
+        .filter((node): node is BookmarkNode => Boolean(node?.type === 'folder'))
       bookmarkError.value = ''
 
       if (!settingsExisted && settings.value.visibleFolderIds.length === 0) {
@@ -73,6 +85,21 @@ export const useStarPageStore = defineStore('star-page', () => {
     } catch (error) {
       bookmarkError.value = error instanceof Error ? error.message : '无法读取浏览器书签'
     }
+  }
+
+  async function createBookmark(parentId: string, title: string, url: string) {
+    await createBrowserBookmark(parentId, title, url)
+    await refreshBookmarks()
+  }
+
+  async function updateBookmark(id: string, title: string, url: string) {
+    await updateBrowserBookmark(id, title, url)
+    await refreshBookmarks()
+  }
+
+  async function deleteBookmark(id: string) {
+    await deleteBrowserBookmark(id)
+    await refreshBookmarks()
   }
 
   async function updateSettings(patch: Partial<Omit<StarPageSettings, 'version'>>) {
@@ -169,6 +196,9 @@ export const useStarPageStore = defineStore('star-page', () => {
     visibleSections,
     init,
     refreshBookmarks,
+    createBookmark,
+    updateBookmark,
+    deleteBookmark,
     updateSettings,
     toggleFolderVisibility,
     moveVisibleFolder,

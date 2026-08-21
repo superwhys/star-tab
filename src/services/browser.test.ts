@@ -1,7 +1,7 @@
 import { isProxy, reactive } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from '../utils/settings'
-import { createSettingsSnapshot, writeSettings } from './browser'
+import { createBookmark, createSettingsSnapshot, deleteBookmark, updateBookmark, writeSettings } from './browser'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -44,5 +44,38 @@ describe('settings persistence adapter', () => {
       searchEngineId: 'default',
       version: 3,
     })
+  })
+})
+
+describe('bookmark mutation adapter', () => {
+  it('forwards create, update and delete operations to Chrome bookmarks', async () => {
+    const calls: unknown[] = []
+    vi.stubGlobal('chrome', {
+      runtime: { lastError: undefined },
+      bookmarks: {
+        create(value: unknown, callback: () => void) {
+          calls.push(['create', value])
+          callback()
+        },
+        update(id: string, value: unknown, callback: () => void) {
+          calls.push(['update', id, value])
+          callback()
+        },
+        remove(id: string, callback: () => void) {
+          calls.push(['remove', id])
+          callback()
+        },
+      },
+    })
+
+    await createBookmark('1', 'Example', 'https://example.com/')
+    await updateBookmark('10', 'Updated', 'https://updated.example.com/')
+    await deleteBookmark('10')
+
+    expect(calls).toEqual([
+      ['create', { parentId: '1', title: 'Example', url: 'https://example.com/' }],
+      ['update', '10', { title: 'Updated', url: 'https://updated.example.com/' }],
+      ['remove', '10'],
+    ])
   })
 })

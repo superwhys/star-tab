@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useBookmarkContextMenu } from '../composables/useBookmarkContextMenu'
+import { useBookmarkEditor } from '../composables/useBookmarkEditor'
 import { useStarPageStore } from '../stores/starPage'
 
 const store = useStarPageStore()
 const menu = ref<HTMLElement>()
 const copied = ref(false)
 const { contextMenu, closeContextMenu } = useBookmarkContextMenu()
+const { openCreateBookmark, openEditBookmark, openDeleteBookmark } = useBookmarkEditor()
 let copiedTimer = 0
 
 const menuStyle = computed(() => {
@@ -14,7 +16,7 @@ const menuStyle = computed(() => {
   if (!state) return undefined
   return {
     left: `${Math.min(Math.max(8, state.x), Math.max(8, window.innerWidth - 224))}px`,
-    top: `${Math.min(Math.max(8, state.y), Math.max(8, window.innerHeight - (state.node.type === 'bookmark' ? 170 : 70)))}px`,
+    top: `${Math.min(Math.max(8, state.y), Math.max(8, window.innerHeight - (state.node.type === 'bookmark' ? 270 : 116)))}px`,
   }
 })
 
@@ -22,6 +24,27 @@ function openFolder() {
   const node = contextMenu.value?.node
   if (!node || node.type !== 'folder') return
   store.openFolder(node)
+  closeContextMenu()
+}
+
+function addBookmark() {
+  const node = contextMenu.value?.node
+  if (!node || node.type !== 'folder') return
+  openCreateBookmark(node)
+  closeContextMenu()
+}
+
+function editBookmark() {
+  const node = contextMenu.value?.node
+  if (!node || node.type !== 'bookmark') return
+  openEditBookmark(node)
+  closeContextMenu()
+}
+
+function deleteBookmark() {
+  const node = contextMenu.value?.node
+  if (!node || node.type !== 'bookmark') return
+  openDeleteBookmark(node)
   closeContextMenu()
 }
 
@@ -90,11 +113,26 @@ onBeforeUnmount(() => {
             <span aria-hidden="true">⧉</span>
             {{ copied ? '已复制链接' : '复制链接' }}
           </button>
+          <span class="bookmark-context-menu__separator" role="separator"></span>
+          <button type="button" role="menuitem" @click="editBookmark">
+            <span aria-hidden="true">✎</span>
+            编辑书签
+          </button>
+          <button type="button" class="bookmark-context-menu__danger" role="menuitem" @click="deleteBookmark">
+            <span aria-hidden="true">×</span>
+            删除书签
+          </button>
         </template>
-        <button v-else type="button" role="menuitem" @click="openFolder">
-          <span aria-hidden="true">⌁</span>
-          打开文件夹
-        </button>
+        <template v-else>
+          <button type="button" role="menuitem" @click="openFolder">
+            <span aria-hidden="true">⌁</span>
+            打开文件夹
+          </button>
+          <button type="button" role="menuitem" @click="addBookmark">
+            <span aria-hidden="true">＋</span>
+            新增书签
+          </button>
+        </template>
       </div>
     </Transition>
   </Teleport>
@@ -147,6 +185,18 @@ onBeforeUnmount(() => {
   color: rgba(171, 193, 255, 0.72);
   font-size: 15px;
   text-align: center;
+}
+
+.bookmark-context-menu__separator {
+  display: block;
+  height: 1px;
+  margin: 3px 8px;
+  background: rgba(211, 222, 255, 0.09);
+}
+
+.bookmark-context-menu .bookmark-context-menu__danger,
+.bookmark-context-menu .bookmark-context-menu__danger span {
+  color: rgba(255, 151, 167, 0.9);
 }
 
 .bookmark-menu-enter-active,
