@@ -26,4 +26,11 @@ describe('BookmarkGrid', () => {
     await wrapper.get('button.bookmark-tile').trigger('click')
     expect(wrapper.emitted('openFolder')?.[0]).toEqual([folder])
   })
+
+  it('marks folder contents as a dialog grid without dock magnification', () => {
+    const wrapper = mount(BookmarkGrid, { props: { nodes: [page], dialog: true } })
+
+    expect(wrapper.get('.bookmark-grid').classes()).toContain('bookmark-grid--dialog')
+    expect(wrapper.get('.bookmark-grid').classes()).not.toContain('bookmark-grid--dock-live')
+  })
 })

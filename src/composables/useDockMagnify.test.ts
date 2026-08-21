@@ -5,6 +5,7 @@ import {
   applyDockMagnify,
   canUseDockMagnify,
   computeDockFalloff,
+  computeDockRowStrength,
   computeDockRowShifts,
   computeDockScale,
   DOCK_LIVE_CLASS,
@@ -57,6 +58,15 @@ describe('computeDockScale', () => {
     const neighbor = computeDockScale(90, 180)
     expect(neighbor).toBeGreaterThan(1)
     expect(neighbor).toBeLessThan(DOCK_MAX_SCALE)
+  })
+})
+
+describe('computeDockRowStrength', () => {
+  it('holds the peak across the icon and fades out smoothly between rows', () => {
+    expect(computeDockRowStrength(32, 64)).toBe(1)
+    expect(computeDockRowStrength(56, 64)).toBeGreaterThan(0)
+    expect(computeDockRowStrength(56, 64)).toBeLessThan(1)
+    expect(computeDockRowStrength(80, 64)).toBe(0)
   })
 })
 
@@ -243,6 +253,43 @@ describe('useDockMagnify', () => {
     Object.defineProperty(move, 'pointerType', { value: 'mouse' })
     grid.dispatchEvent(move)
     expect(Number(tile.style.getPropertyValue('--dock-scale'))).toBeGreaterThan(1.2)
+
+    wrapper.unmount()
+  })
+
+  it('does not enable magnification when the grid opts out', async () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('hover: hover'),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+
+    const Host = defineComponent({
+      setup() {
+        const gridRef = ref<HTMLElement | null>(null)
+        const enabled = ref(false)
+        useDockMagnify(gridRef, enabled)
+        return { gridRef }
+      },
+      template: '<div ref="gridRef" class="bookmark-grid"><button class="bookmark-tile"><span class="favicon"></span></button></div>',
+    })
+
+    const wrapper = mount(Host, { attachTo: document.body })
+    await nextTick()
+
+    const grid = wrapper.get('.bookmark-grid').element
+    const tile = wrapper.get('.bookmark-tile').element as HTMLElement
+    const move = new MouseEvent('pointermove', { clientX: 50, clientY: 39, bubbles: true })
+    Object.defineProperty(move, 'pointerType', { value: 'mouse' })
+    grid.dispatchEvent(move)
+
+    expect(grid.classList.contains(DOCK_LIVE_CLASS)).toBe(false)
+    expect(tile.style.getPropertyValue('--dock-scale')).toBe('')
 
     wrapper.unmount()
   })

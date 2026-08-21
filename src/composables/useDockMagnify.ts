@@ -19,19 +19,23 @@ const FINE_POINTER_QUERY = '(hover: hover) and (pointer: fine)'
 const REDUCE_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 const ROW_BUCKET = 12
 
-export const DOCK_MAX_SCALE = 1.82
-export const DOCK_RANGE_X_RATIO = 3.75
-export const DOCK_LIFT_RATIO = 4
+export const DOCK_MAX_SCALE = 1.64
+export const DOCK_RANGE_X_RATIO = 2.75
+export const DOCK_LIFT_RATIO = 3
 export const DOCK_LIVE_CLASS = 'bookmark-grid--dock-live'
 export const DOCK_SETTLING_CLASS = 'bookmark-grid--dock-settling'
 export const DOCK_TRACKING_CLASS = 'bookmark-grid--dock-tracking'
+
+const DOCK_ROW_CORE_RATIO = 0.62
+const DOCK_ROW_FADE_RATIO = 1.12
 
 /**
  * 计算程序坞式衰减系数，中心为 1、范围外为 0。
  */
 export function computeDockFalloff(distance: number, range: number): number {
   if (range <= 0 || distance >= range) return 0
-  return Math.cos((distance / range) * (Math.PI / 2))
+  const cosine = Math.cos((distance / range) * (Math.PI / 2))
+  return cosine * cosine
 }
 
 /**
@@ -39,6 +43,18 @@ export function computeDockFalloff(distance: number, range: number): number {
  */
 export function computeDockScale(distance: number, range: number, maxScale = DOCK_MAX_SCALE): number {
   return 1 + (maxScale - 1) * computeDockFalloff(distance, range)
+}
+
+/**
+ * 指针在图标高度内时保持完整波峰，离开当前行后再平滑淡出。
+ * 这样跨越多行宫格时不会突然把整行放大或缩回。
+ */
+export function computeDockRowStrength(distance: number, size: number): number {
+  if (size <= 0) return 0
+  const core = size * DOCK_ROW_CORE_RATIO
+  const fade = size * DOCK_ROW_FADE_RATIO
+  if (distance <= core) return 1
+  return computeDockFalloff(distance - core, fade - core)
 }
 
 /**
@@ -146,12 +162,20 @@ export function applyDockMagnify(
   }
 
   const rows = groupDockTilesByRow(targets)
-  const activeRow = findActiveDockRow(rows, pointer)
-  const activeTiles = new Set(activeRow?.map((target) => target.tile))
+  const rowStrengthByTile = new Map<HTMLElement, number>()
+  for (const row of rows) {
+    if (!row.length) continue
+    const rowY = row.reduce((total, target) => total + target.y, 0) / row.length
+    const rowSize = Math.max(...row.map((target) => target.size))
+    const strength = computeDockRowStrength(Math.abs(pointer.y - rowY), rowSize)
+    for (const target of row) rowStrengthByTile.set(target.tile, strength)
+  }
+
   const scales = targets.map((target) => {
-    if (!activeTiles.has(target.tile)) return 1
     const rangeX = Math.max(target.size * rangeXRatio, 1)
-    return computeDockScale(Math.abs(pointer.x - target.x), rangeX, maxScale)
+    const horizontalStrength = computeDockFalloff(Math.abs(pointer.x - target.x), rangeX)
+    const rowStrength = rowStrengthByTile.get(target.tile) ?? 0
+    return 1 + (maxScale - 1) * horizontalStrength * rowStrength
   })
 
   const scaleByTile = new Map(targets.map((target, index) => [target.tile, scales[index]]))
@@ -184,7 +208,7 @@ export function canUseDockMagnify(): boolean {
 /**
  * 在书签网格上跟踪指针，让靠近鼠标的图标像程序坞一样放大。
  */
-export function useDockMagnify(gridRef: Ref<HTMLElement | null>) {
+export function useDockMagnify(gridRef: Ref<HTMLElement | null>, enabled?: Ref<boolean>) {
   let frame = 0
   let settleTimer = 0
   let grid: HTMLElement | null = null
@@ -202,7 +226,7 @@ export function useDockMagnify(gridRef: Ref<HTMLElement | null>) {
     grid.classList.toggle(DOCK_SETTLING_CLASS, enabled)
     window.clearTimeout(settleTimer)
     if (enabled) {
-      settleTimer = window.setTimeout(() => grid?.classList.remove(DOCK_SETTLING_CLASS, DOCK_TRACKING_CLASS), 340)
+      settleTimer = window.setTimeout(() => grid?.classList.remove(DOCK_SETTLING_CLASS, DOCK_TRACKING_CLASS), 420)
     }
   }
 
@@ -213,7 +237,7 @@ export function useDockMagnify(gridRef: Ref<HTMLElement | null>) {
   }
 
   function updateLiveState() {
-    const nextLive = canUseDockMagnify()
+    const nextLive = enabled?.value !== false && canUseDockMagnify()
     if (nextLive === live) return
     live = nextLive
     grid?.classList.toggle(DOCK_LIVE_CLASS, live)
@@ -241,7 +265,7 @@ export function useDockMagnify(gridRef: Ref<HTMLElement | null>) {
 
   function bind(nextGrid: HTMLElement) {
     grid = nextGrid
-    live = canUseDockMagnify()
+    live = enabled?.value !== false && canUseDockMagnify()
     grid.classList.toggle(DOCK_LIVE_CLASS, live)
     grid.addEventListener('pointerenter', onPointerMove)
     grid.addEventListener('pointermove', onPointerMove)
@@ -271,6 +295,8 @@ export function useDockMagnify(gridRef: Ref<HTMLElement | null>) {
     },
     { flush: 'post', immediate: true },
   )
+
+  if (enabled) watch(enabled, updateLiveState, { flush: 'post' })
 
   for (const media of mediaQueries) media.addEventListener('change', updateLiveState)
   onBeforeUnmount(() => {

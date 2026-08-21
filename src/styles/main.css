@@ -1168,22 +1168,22 @@ input:focus-visible {
   transform: translate3d(var(--dock-shift, 0px), var(--dock-lift, 0px), 0) scale(var(--dock-scale, 1));
   transform-origin: center bottom;
   filter:
-    brightness(calc(1 + var(--dock-emphasis, 0) * 0.16))
-    saturate(calc(1 + var(--dock-emphasis, 0) * 0.12));
+    brightness(calc(1 + var(--dock-emphasis, 0) * 0.09))
+    saturate(calc(1 + var(--dock-emphasis, 0) * 0.07));
   box-shadow:
-    inset 0 1px rgba(255, 255, 255, calc(0.12 + var(--dock-emphasis, 0) * 0.16)),
-    0 calc(12px + var(--dock-emphasis, 0) * 16px) calc(26px + var(--dock-emphasis, 0) * 22px) rgba(1, 4, 22, calc(0.22 + var(--dock-emphasis, 0) * 0.2)),
-    0 calc(28px + var(--dock-emphasis, 0) * 18px) calc(36px + var(--dock-emphasis, 0) * 18px) rgba(1, 4, 22, calc(var(--dock-emphasis, 0) * 0.16)),
-    0 0 calc(var(--dock-emphasis, 0) * 28px) rgba(126, 156, 255, calc(var(--dock-emphasis, 0) * 0.28));
+    inset 0 1px rgba(255, 255, 255, calc(0.12 + var(--dock-emphasis, 0) * 0.1)),
+    0 calc(12px + var(--dock-emphasis, 0) * 10px) calc(26px + var(--dock-emphasis, 0) * 14px) rgba(1, 4, 22, calc(0.22 + var(--dock-emphasis, 0) * 0.14)),
+    0 calc(24px + var(--dock-emphasis, 0) * 12px) calc(34px + var(--dock-emphasis, 0) * 12px) rgba(1, 4, 22, calc(var(--dock-emphasis, 0) * 0.11)),
+    0 0 calc(var(--dock-emphasis, 0) * 18px) rgba(126, 156, 255, calc(var(--dock-emphasis, 0) * 0.18));
 }
 
 .bookmark-grid--dock-tracking .bookmark-tile > .favicon,
 .bookmark-grid--dock-tracking .bookmark-tile > .folder-preview,
 .bookmark-grid--dock-tracking .bookmark-tile__title {
   transition:
-    transform 90ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter 140ms ease-out,
-    box-shadow 140ms ease-out;
+    transform 110ms cubic-bezier(0.2, 0.75, 0.25, 1),
+    filter 150ms ease-out,
+    box-shadow 170ms ease-out;
   will-change: transform;
 }
 
@@ -1191,16 +1191,16 @@ input:focus-visible {
 .bookmark-grid--dock-settling .bookmark-tile > .folder-preview,
 .bookmark-grid--dock-settling .bookmark-tile__title {
   transition:
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 240ms ease,
-    box-shadow 240ms ease;
+    transform 380ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 300ms ease,
+    box-shadow 320ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .bookmark-grid:not(.bookmark-grid--dock-live) .bookmark-tile:hover > .favicon,
-  .bookmark-grid:not(.bookmark-grid--dock-live) .bookmark-tile:hover > .folder-preview {
-    transform: translate3d(0, -10px, 0) scale(1.14);
-    filter: brightness(1.08) saturate(1.06);
+  .bookmark-grid:not(.bookmark-grid--dialog):not(.bookmark-grid--dock-live) .bookmark-tile:hover > .favicon,
+  .bookmark-grid:not(.bookmark-grid--dialog):not(.bookmark-grid--dock-live) .bookmark-tile:hover > .folder-preview {
+    transform: translate3d(0, -5px, 0) scale(1.09);
+    filter: brightness(1.05) saturate(1.04);
   }
 }
 

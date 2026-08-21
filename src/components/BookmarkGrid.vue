@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useDockMagnify } from '../composables/useDockMagnify'
 import type { BookmarkNode } from '../types'
 import BookmarkTile from './BookmarkTile.vue'
 
-defineProps<{
+const props = defineProps<{
   nodes: BookmarkNode[]
   compact?: boolean
   dialog?: boolean
@@ -15,7 +15,8 @@ const emit = defineEmits<{
 }>()
 
 const gridRef = ref<HTMLElement | null>(null)
-useDockMagnify(gridRef)
+const dockEnabled = computed(() => !props.dialog)
+useDockMagnify(gridRef, dockEnabled)
 </script>
 
 <template>
