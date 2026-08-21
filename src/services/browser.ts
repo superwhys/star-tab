@@ -4,6 +4,9 @@ import type { BookmarkNode, SearchEngineId, StarPageSettings } from '../types'
 import { normalizeBookmarkTree } from '../utils/bookmarks'
 import { SETTINGS_STORAGE_KEY } from '../utils/settings'
 
+export type SettingsStorageArea = 'local' | 'sync'
+export const SETTINGS_SYNC_PREFERENCE_KEY = 'star-page:settings-sync-enabled'
+
 let prototypeBookmarkTree = structuredClone(MOCK_BOOKMARK_TREE)
 let prototypeBookmarkId = 10000
 
@@ -121,9 +124,9 @@ export function subscribeBookmarkChanges(refresh: () => void): () => void {
   }
 }
 
-export async function readSettings(): Promise<{ value?: unknown; exists: boolean }> {
+export async function readSettings(area: SettingsStorageArea = 'local'): Promise<{ value?: unknown; exists: boolean }> {
   if (!hasChromeApi('storage')) {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
+    const raw = localStorage.getItem(settingsStorageKey(area))
     if (!raw) return { exists: false }
     try {
       return { exists: true, value: JSON.parse(raw) }
@@ -133,7 +136,7 @@ export async function readSettings(): Promise<{ value?: unknown; exists: boolean
   }
 
   return new Promise((resolve, reject) => {
-    chrome.storage.local.get(SETTINGS_STORAGE_KEY, (result) => {
+    chrome.storage[area].get(SETTINGS_STORAGE_KEY, (result) => {
       const error = chrome.runtime.lastError
       if (error) {
         reject(new Error(error.message))
@@ -147,16 +150,19 @@ export async function readSettings(): Promise<{ value?: unknown; exists: boolean
   })
 }
 
-export async function writeSettings(settings: StarPageSettings): Promise<void> {
+export async function writeSettings(
+  settings: StarPageSettings,
+  area: SettingsStorageArea = 'local',
+): Promise<void> {
   const snapshot = createSettingsSnapshot(settings)
 
   if (!hasChromeApi('storage')) {
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(snapshot))
+    localStorage.setItem(settingsStorageKey(area), JSON.stringify(snapshot))
     return
   }
 
   return new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [SETTINGS_STORAGE_KEY]: snapshot }, () => {
+    chrome.storage[area].set({ [SETTINGS_STORAGE_KEY]: snapshot }, () => {
       const error = chrome.runtime.lastError
       if (error) {
         reject(new Error(error.message))
@@ -165,6 +171,55 @@ export async function writeSettings(settings: StarPageSettings): Promise<void> {
       resolve()
     })
   })
+}
+
+export async function readSettingsSyncPreference(): Promise<boolean> {
+  if (!hasChromeApi('storage')) return localStorage.getItem(SETTINGS_SYNC_PREFERENCE_KEY) === 'true'
+
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(SETTINGS_SYNC_PREFERENCE_KEY, (result) => {
+      const error = chrome.runtime.lastError
+      if (error) {
+        reject(new Error(error.message))
+        return
+      }
+      resolve(result[SETTINGS_SYNC_PREFERENCE_KEY] === true)
+    })
+  })
+}
+
+export async function writeSettingsSyncPreference(enabled: boolean): Promise<void> {
+  if (!hasChromeApi('storage')) {
+    localStorage.setItem(SETTINGS_SYNC_PREFERENCE_KEY, String(enabled))
+    return
+  }
+
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [SETTINGS_SYNC_PREFERENCE_KEY]: enabled }, () => {
+      const error = chrome.runtime.lastError
+      if (error) {
+        reject(new Error(error.message))
+        return
+      }
+      resolve()
+    })
+  })
+}
+
+export function subscribeSettingsChanges(refresh: (area: SettingsStorageArea) => void): () => void {
+  if (!hasChromeApi('storage') || !chrome.storage.onChanged) return () => undefined
+
+  const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
+    if (changes[SETTINGS_STORAGE_KEY] && (areaName === 'local' || areaName === 'sync')) {
+      refresh(areaName)
+    }
+  }
+  chrome.storage.onChanged.addListener(listener)
+  return () => chrome.storage.onChanged.removeListener(listener)
+}
+
+function settingsStorageKey(area: SettingsStorageArea): string {
+  return area === 'sync' ? `${SETTINGS_STORAGE_KEY}:sync` : SETTINGS_STORAGE_KEY
 }
 
 export function createSettingsSnapshot(settings: StarPageSettings): StarPageSettings {

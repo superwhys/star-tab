@@ -6,9 +6,12 @@ import {
   deleteBookmark as deleteBrowserBookmark,
   readBookmarks,
   readSettings,
+  readSettingsSyncPreference,
   subscribeBookmarkChanges,
+  subscribeSettingsChanges,
   updateBookmark as updateBrowserBookmark,
   writeSettings,
+  writeSettingsSyncPreference,
 } from '../services/browser'
 import { findBookmarkNode, findDefaultBookmarkFolder, flattenFolders } from '../utils/bookmarks'
 import { DEFAULT_SETTINGS, sanitizeSettings } from '../utils/settings'
@@ -20,11 +23,13 @@ export const useStarPageStore = defineStore('star-page', () => {
   const bookmarkError = ref('')
   const settingsSaveState = ref<SettingsSaveState>('idle')
   const settingsError = ref('')
+  const settingsSyncEnabled = ref(false)
   const settingsOpen = ref(false)
   const activeFolderPath = ref<BookmarkNode[]>([])
   const initialized = ref(false)
   let settingsExisted = false
   let unsubscribeBookmarks: (() => void) | undefined
+  let unsubscribeSettings: (() => void) | undefined
   let refreshTimer: number | undefined
   let saveRequestId = 0
   let saveQueue: Promise<void> = Promise.resolve()
@@ -44,9 +49,15 @@ export const useStarPageStore = defineStore('star-page', () => {
     loading.value = true
 
     try {
-      const stored = await readSettings()
+      settingsSyncEnabled.value = await readSettingsSyncPreference()
+      let stored = await readSettings(settingsSyncEnabled.value ? 'sync' : 'local')
+      if (settingsSyncEnabled.value && !stored.exists) {
+        const local = await readSettings('local')
+        if (local.exists) stored = local
+      }
       settingsExisted = stored.exists && Boolean(stored.value && typeof stored.value === 'object')
       settings.value = sanitizeSettings(stored.value)
+      if (settingsSyncEnabled.value && settingsExisted) await writeSettings(settings.value, 'sync')
     } catch (error) {
       settingsExisted = false
       settings.value = { ...DEFAULT_SETTINGS }
@@ -56,6 +67,9 @@ export const useStarPageStore = defineStore('star-page', () => {
     await refreshBookmarks()
 
     unsubscribeBookmarks = subscribeBookmarkChanges(scheduleRefresh)
+    unsubscribeSettings = subscribeSettingsChanges((area) => {
+      if (area === 'sync' && settingsSyncEnabled.value) void refreshSyncedSettings()
+    })
     window.addEventListener('beforeunload', dispose, { once: true })
     loading.value = false
   }
@@ -102,6 +116,41 @@ export const useStarPageStore = defineStore('star-page', () => {
     await refreshBookmarks()
   }
 
+  async function refreshSyncedSettings() {
+    const stored = await readSettings('sync')
+    if (!stored.exists || !stored.value || typeof stored.value !== 'object') return
+    settings.value = sanitizeSettings(stored.value)
+    settingsExisted = true
+  }
+
+  async function setSettingsSyncEnabled(enabled: boolean) {
+    if (settingsSyncEnabled.value === enabled) return
+    const previous = settingsSyncEnabled.value
+    window.clearTimeout(savedStateTimer)
+    settingsSaveState.value = 'saving'
+    settingsError.value = ''
+
+    try {
+      if (enabled) {
+        const synced = await readSettings('sync')
+        if (synced.exists && synced.value && typeof synced.value === 'object') {
+          settings.value = sanitizeSettings(synced.value)
+        }
+        await writeSettings(settings.value, 'sync')
+      } else {
+        await writeSettings(settings.value, 'local')
+      }
+      await writeSettingsSyncPreference(enabled)
+      settingsSyncEnabled.value = enabled
+      settingsExisted = true
+      markSettingsSaved()
+    } catch (error) {
+      settingsSyncEnabled.value = previous
+      settingsSaveState.value = 'error'
+      settingsError.value = error instanceof Error ? error.message : '同步设置失败'
+    }
+  }
+
   async function updateSettings(patch: Partial<Omit<StarPageSettings, 'version'>>) {
     settings.value = sanitizeSettings({ ...settings.value, ...patch, version: 3 })
     settingsExisted = true
@@ -114,6 +163,7 @@ export const useStarPageStore = defineStore('star-page', () => {
       ...value,
       visibleFolderIds: [...value.visibleFolderIds],
     }
+    const storageArea = settingsSyncEnabled.value ? 'sync' : 'local'
 
     window.clearTimeout(savedStateTimer)
     settingsSaveState.value = 'saving'
@@ -121,13 +171,10 @@ export const useStarPageStore = defineStore('star-page', () => {
 
     const operation = saveQueue
       .catch(() => undefined)
-      .then(() => writeSettings(snapshot))
+      .then(() => writeSettings(snapshot, storageArea))
       .then(() => {
         if (requestId !== saveRequestId) return
-        settingsSaveState.value = 'saved'
-        savedStateTimer = window.setTimeout(() => {
-          if (settingsSaveState.value === 'saved') settingsSaveState.value = 'idle'
-        }, 1800)
+        markSettingsSaved()
       })
       .catch((error) => {
         if (requestId !== saveRequestId) return
@@ -137,6 +184,13 @@ export const useStarPageStore = defineStore('star-page', () => {
 
     saveQueue = operation
     return operation
+  }
+
+  function markSettingsSaved() {
+    settingsSaveState.value = 'saved'
+    savedStateTimer = window.setTimeout(() => {
+      if (settingsSaveState.value === 'saved') settingsSaveState.value = 'idle'
+    }, 1800)
   }
 
   function toggleFolderVisibility(folderId: string) {
@@ -178,6 +232,7 @@ export const useStarPageStore = defineStore('star-page', () => {
 
   function dispose() {
     unsubscribeBookmarks?.()
+    unsubscribeSettings?.()
     window.clearTimeout(refreshTimer)
     window.clearTimeout(savedStateTimer)
   }
@@ -189,6 +244,7 @@ export const useStarPageStore = defineStore('star-page', () => {
     bookmarkError,
     settingsSaveState,
     settingsError,
+    settingsSyncEnabled,
     settingsOpen,
     activeFolderPath,
     activeFolder,
@@ -199,6 +255,7 @@ export const useStarPageStore = defineStore('star-page', () => {
     createBookmark,
     updateBookmark,
     deleteBookmark,
+    setSettingsSyncEnabled,
     updateSettings,
     toggleFolderVisibility,
     moveVisibleFolder,

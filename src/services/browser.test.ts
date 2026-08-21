@@ -1,7 +1,17 @@
 import { isProxy, reactive } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from '../utils/settings'
-import { createBookmark, createSettingsSnapshot, deleteBookmark, updateBookmark, writeSettings } from './browser'
+import {
+  createBookmark,
+  createSettingsSnapshot,
+  deleteBookmark,
+  readSettings,
+  readSettingsSyncPreference,
+  SETTINGS_SYNC_PREFERENCE_KEY,
+  updateBookmark,
+  writeSettings,
+  writeSettingsSyncPreference,
+} from './browser'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -18,6 +28,35 @@ describe('settings persistence adapter', () => {
     expect(isProxy(snapshot)).toBe(false)
     expect(isProxy(snapshot.visibleFolderIds)).toBe(false)
     expect(snapshot).toEqual(source)
+  })
+
+  it('reads and writes settings through Chrome sync storage when selected', async () => {
+    const localValues: Record<string, unknown> = {}
+    const syncValues: Record<string, unknown> = {}
+    const storageArea = (values: Record<string, unknown>) => ({
+      get(key: string, callback: (result: Record<string, unknown>) => void) {
+        callback(Object.prototype.hasOwnProperty.call(values, key) ? { [key]: values[key] } : {})
+      },
+      set(next: Record<string, unknown>, callback: () => void) {
+        Object.assign(values, next)
+        callback()
+      },
+    })
+    vi.stubGlobal('chrome', {
+      runtime: { lastError: undefined },
+      storage: {
+        local: storageArea(localValues),
+        sync: storageArea(syncValues),
+      },
+    })
+
+    await writeSettings({ ...DEFAULT_SETTINGS, backgroundId: 'blue-horizon' }, 'sync')
+    await writeSettingsSyncPreference(true)
+
+    expect((await readSettings('sync')).value).toMatchObject({ backgroundId: 'blue-horizon' })
+    expect(await readSettingsSyncPreference()).toBe(true)
+    expect(localValues[SETTINGS_SYNC_PREFERENCE_KEY]).toBe(true)
+    expect(localValues[SETTINGS_STORAGE_KEY]).toBeUndefined()
   })
 
   it('writes only the plain snapshot to Chrome Storage', async () => {

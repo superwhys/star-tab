@@ -86,4 +86,18 @@ describe('star page store', () => {
     await store.deleteBookmark(created!.id)
     expect(store.activeFolder?.children.some((node) => node.id === created!.id)).toBe(false)
   })
+
+  it('enables configuration sync and restores synced settings', async () => {
+    const firstStore = useStarPageStore()
+    await firstStore.init()
+    await firstStore.updateSettings({ backgroundId: 'blue-horizon', compactMode: true })
+    await firstStore.setSettingsSyncEnabled(true)
+    expect(firstStore.settingsSyncEnabled).toBe(true)
+
+    setActivePinia(createPinia())
+    const restoredStore = useStarPageStore()
+    await restoredStore.init()
+    expect(restoredStore.settingsSyncEnabled).toBe(true)
+    expect(restoredStore.settings).toMatchObject({ backgroundId: 'blue-horizon', compactMode: true })
+  })
 })

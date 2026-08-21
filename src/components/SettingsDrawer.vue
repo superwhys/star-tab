@@ -12,9 +12,11 @@ const {
   folderOptions,
   settingsSaveState,
   settingsError,
+  settingsSyncEnabled,
   updateSettings,
   toggleFolderVisibility,
   moveVisibleFolder,
+  setSettingsSyncEnabled,
 } = useSettings()
 const { prefersReducedMotion } = useBackground()
 const selectedFolderOptions = computed(() =>
@@ -74,6 +76,24 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
                 <span v-if="settings.backgroundId === preset.id" class="background-option__check">✓</span>
               </button>
             </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section__heading">
+              <h3>同步</h3>
+            </div>
+            <label class="setting-row">
+              <span>
+                <strong>Chrome 配置同步</strong>
+                <small>跨设备同步背景、搜索引擎、布局和显示偏好</small>
+              </span>
+              <input
+                type="checkbox"
+                :checked="settingsSyncEnabled"
+                @change="setSettingsSyncEnabled(($event.target as HTMLInputElement).checked)"
+              />
+              <span class="switch" aria-hidden="true"></span>
+            </label>
           </section>
 
           <section class="settings-section">
@@ -189,7 +209,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
           </template>
           <template v-else-if="settingsSaveState === 'saved'">
             <span class="settings-panel__status-dot settings-panel__status-dot--saved"></span>
-            设置已保存到本机
+            {{ settingsSyncEnabled ? '设置已同步到 Chrome' : '设置已保存到本机' }}
           </template>
           <template v-else-if="settingsSaveState === 'error'">
             <span class="settings-panel__status-dot settings-panel__status-dot--error"></span>
@@ -197,7 +217,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
           </template>
           <template v-else>
             <span class="settings-panel__privacy-dot"></span>
-            所有设置与书签数据仅保存在本机
+            {{ settingsSyncEnabled ? '配置通过 Chrome 同步，书签由浏览器管理' : '所有设置与书签数据仅保存在本机' }}
           </template>
         </footer>
       </aside>

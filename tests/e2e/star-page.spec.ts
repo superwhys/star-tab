@@ -84,6 +84,18 @@ test('switches the search engine and restores it after reload', async ({ page })
   await expect(page.getByRole('button', { name: '搜索引擎：Bing' })).toBeVisible()
 })
 
+test('enables Chrome configuration sync and restores the preference', async ({ page }) => {
+  await page.getByRole('button', { name: '打开设置' }).click()
+  const syncToggle = page.getByRole('checkbox', { name: /Chrome 配置同步/ })
+  await page.locator('label.setting-row').filter({ hasText: 'Chrome 配置同步' }).click()
+  await expect(syncToggle).toBeChecked()
+  await expect(page.getByText('设置已同步到 Chrome')).toBeVisible()
+
+  await page.reload()
+  await page.getByRole('button', { name: '打开设置' }).click()
+  await expect(page.getByRole('checkbox', { name: /Chrome 配置同步/ })).toBeChecked()
+})
+
 test('links bookmark search to the 3D sphere and restores the view after clearing', async ({ page }) => {
   await page.getByRole('button', { name: '切换到 3D 星球布局' }).click()
   const sphere = page.getByRole('region', { name: '可旋转和缩放的书签星球' })
