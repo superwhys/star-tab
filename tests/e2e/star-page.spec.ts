@@ -12,6 +12,28 @@ test('search prototype gives visible feedback', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('原型模式')
 })
 
+test('opens a typed URL directly instead of searching it', async ({ page }) => {
+  await page.evaluate(() => {
+    document.addEventListener(
+      'click',
+      (event) => {
+        const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('.search-bar__direct-link')
+        if (!link) return
+        event.preventDefault()
+        ;(window as typeof window & { openedDirectUrl?: string }).openedDirectUrl = link.href
+      },
+      true,
+    )
+  })
+
+  const search = page.getByPlaceholder('搜索书签或网页…')
+  await search.fill('example.com/docs?q=1')
+  await expect(page.getByRole('button', { name: /直接访问 https:\/\/example\.com/ })).toBeVisible()
+  await search.press('Enter')
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { openedDirectUrl?: string }).openedDirectUrl))
+    .toBe('https://example.com/docs?q=1')
+})
+
 test('searches bookmarks without overriding the default Enter behavior', async ({ page }) => {
   const search = page.getByPlaceholder('搜索书签或网页…')
   await search.fill('Vue')

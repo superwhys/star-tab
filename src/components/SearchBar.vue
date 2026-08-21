@@ -6,6 +6,7 @@ import { useSettings } from '../composables/useSettings'
 import { getSearchEngine, SEARCH_ENGINES } from '../search/engines'
 import type { BookmarkSearchState, SearchEngineId } from '../types'
 import { bookmarkHostname, searchBookmarks, splitSearchHighlight } from '../utils/bookmarks'
+import { normalizeDirectUrl } from '../utils/urls'
 import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
 
@@ -15,6 +16,7 @@ const emit = defineEmits<{
 
 const root = ref<HTMLElement>()
 const input = ref<HTMLInputElement>()
+const directLink = ref<HTMLAnchorElement>()
 const { query, feedback, searching, submitSearch } = useSearch()
 const { bookmarkTree } = useBookmarks()
 const { settings, updateSettings } = useSettings()
@@ -23,6 +25,7 @@ const suggestionsDismissed = ref(false)
 const activeIndex = ref(-1)
 const engineMenuOpen = ref(false)
 const selectedEngine = computed(() => getSearchEngine(settings.value.searchEngineId))
+const directUrl = computed(() => normalizeDirectUrl(query.value))
 const suggestions = computed(() => searchBookmarks(bookmarkTree.value, query.value, 7))
 const showSuggestions = computed(
   () =>
@@ -62,6 +65,10 @@ async function handleSubmit() {
   const selected = activeSuggestion.value
   if (selected?.url) {
     document.getElementById(suggestionId(activeIndex.value))?.click()
+    return
+  }
+  if (directUrl.value) {
+    directLink.value?.click()
     return
   }
 
@@ -171,10 +178,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
         type="submit"
         class="search-bar__submit"
         :disabled="!query.trim() || searching"
-        :aria-label="activeSuggestion ? `打开书签 ${activeSuggestion.title}` : '搜索'"
+        :aria-label="activeSuggestion ? `打开书签 ${activeSuggestion.title}` : directUrl ? `直接访问 ${directUrl}` : '搜索'"
       >
         <span>↵</span>
       </button>
+      <a
+        v-if="directUrl"
+        ref="directLink"
+        class="search-bar__direct-link"
+        :href="directUrl"
+        tabindex="-1"
+        aria-hidden="true"
+      ></a>
     </form>
     <Transition name="suggestions">
       <ul
