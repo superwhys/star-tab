@@ -212,7 +212,7 @@ test('opens a folder, navigates deeper and closes it', async ({ page }) => {
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('button', { name: '打开文件夹 代码仓库' })).toBeVisible()
   await page.getByRole('button', { name: '打开文件夹 代码仓库' }).click()
-  await expect(page.getByRole('button', { name: '代码仓库' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('button', { name: '代码仓库', exact: true })).toHaveAttribute('aria-current', 'page')
   await page.getByRole('button', { name: '关闭文件夹' }).click()
   await expect(page.getByRole('dialog')).toBeHidden()
 })
