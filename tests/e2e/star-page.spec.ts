@@ -209,7 +209,24 @@ test('blocks the context menu, page text selection and element dragging', async 
 
 test('opens a folder, navigates deeper and closes it', async ({ page }) => {
   await page.getByRole('button', { name: '打开文件夹 开发工具' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  const dialog = page.getByRole('dialog')
+  const addBookmark = page.getByRole('button', { name: '在开发工具新增书签' })
+  const closeFolder = page.getByRole('button', { name: '关闭文件夹' })
+  await expect(dialog).toBeVisible()
+  await expect(addBookmark).toBeVisible()
+
+  const [dialogBox, addBox, closeBox] = await Promise.all([
+    dialog.boundingBox(),
+    addBookmark.boundingBox(),
+    closeFolder.boundingBox(),
+  ])
+  expect(dialogBox).not.toBeNull()
+  expect(addBox).not.toBeNull()
+  expect(closeBox).not.toBeNull()
+  expect(addBox!.x + addBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width)
+  expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width)
+  expect(Math.abs((addBox!.y + addBox!.height / 2) - (closeBox!.y + closeBox!.height / 2))).toBeLessThan(2)
+
   await expect(page.getByRole('button', { name: '打开文件夹 代码仓库' })).toBeVisible()
   await page.getByRole('button', { name: '打开文件夹 代码仓库' }).click()
   await expect(page.getByRole('button', { name: '代码仓库', exact: true })).toHaveAttribute('aria-current', 'page')
