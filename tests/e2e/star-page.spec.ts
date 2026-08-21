@@ -122,6 +122,22 @@ test('links bookmark search to the 3D sphere and restores the view after clearin
   await expect(sphere).toHaveAttribute('data-search-camera', 'focused', { timeout: 5000 })
 })
 
+test('opens a custom context menu for bookmarks and folders', async ({ page }) => {
+  await page.getByRole('link', { name: '打开 GitHub' }).first().click({ button: 'right' })
+  const bookmarkMenu = page.getByRole('menu', { name: 'GitHub 操作菜单' })
+  await expect(bookmarkMenu).toBeVisible()
+  await expect(bookmarkMenu.getByRole('menuitem', { name: '在当前标签页打开' })).toHaveAttribute('href', 'https://github.com')
+  await expect(bookmarkMenu.getByRole('menuitem', { name: '在新标签页打开' })).toHaveAttribute('target', '_blank')
+  await expect(bookmarkMenu.getByRole('menuitem', { name: '复制链接' })).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(bookmarkMenu).toBeHidden()
+
+  await page.getByRole('button', { name: '打开文件夹 开发工具' }).click({ button: 'right' })
+  const folderMenu = page.getByRole('menu', { name: '开发工具 操作菜单' })
+  await expect(folderMenu.getByRole('menuitem', { name: '打开文件夹' })).toBeVisible()
+})
+
 test('blocks the context menu, page text selection and element dragging', async ({ page }) => {
   const result = await page.evaluate(() => {
     const target = document.querySelector('.brand')!

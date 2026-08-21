@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { BookmarkNode } from '../types'
+import { useBookmarkContextMenu } from '../composables/useBookmarkContextMenu'
 import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
 
-defineProps<{
+const props = defineProps<{
   node: BookmarkNode
   compact?: boolean
 }>()
@@ -11,6 +12,8 @@ defineProps<{
 const emit = defineEmits<{
   openFolder: [node: BookmarkNode]
 }>()
+
+const { openContextMenu } = useBookmarkContextMenu()
 </script>
 
 <template>
@@ -20,6 +23,8 @@ const emit = defineEmits<{
     :class="{ 'bookmark-tile--compact': compact }"
     :href="node.url"
     :aria-label="`打开 ${node.title}`"
+    data-bookmark-context
+    @contextmenu="openContextMenu(props.node, $event)"
   >
     <FaviconImage :title="node.title" :url="node.url" :size="64" />
     <span class="bookmark-tile__title" :title="node.title">{{ node.title }}</span>
@@ -31,7 +36,9 @@ const emit = defineEmits<{
     class="bookmark-tile bookmark-tile--folder"
     :class="{ 'bookmark-tile--compact': compact }"
     :aria-label="`打开文件夹 ${node.title}`"
+    data-bookmark-context
     @click="emit('openFolder', node)"
+    @contextmenu="openContextMenu(props.node, $event)"
   >
     <span class="folder-preview" aria-hidden="true">
       <span v-if="node.children.length === 0" class="folder-preview__empty">
@@ -51,4 +58,3 @@ const emit = defineEmits<{
     <span class="bookmark-tile__title" :title="node.title">{{ node.title }}</span>
   </button>
 </template>
-

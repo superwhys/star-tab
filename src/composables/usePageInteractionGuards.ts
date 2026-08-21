@@ -1,6 +1,7 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 
 const TEXT_EDITING_SELECTOR = 'input, textarea, [contenteditable="true"]'
+const CUSTOM_CONTEXT_MENU_SELECTOR = '[data-bookmark-context]'
 
 function isTextEditingTarget(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest(TEXT_EDITING_SELECTOR))
@@ -8,6 +9,7 @@ function isTextEditingTarget(target: EventTarget | null): boolean {
 
 export function usePageInteractionGuards() {
   function preventContextMenu(event: MouseEvent) {
+    if (event.target instanceof Element && event.target.closest(CUSTOM_CONTEXT_MENU_SELECTOR)) return
     event.preventDefault()
   }
 

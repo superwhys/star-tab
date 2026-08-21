@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useBookmarks } from '../composables/useBookmarks'
+import { useBookmarkContextMenu } from '../composables/useBookmarkContextMenu'
 import { useSearch } from '../composables/useSearch'
 import { useSettings } from '../composables/useSettings'
 import { getSearchEngine, SEARCH_ENGINES } from '../search/engines'
@@ -18,6 +19,7 @@ const root = ref<HTMLElement>()
 const input = ref<HTMLInputElement>()
 const directLink = ref<HTMLAnchorElement>()
 const { query, feedback, searching, submitSearch } = useSearch()
+const { openContextMenu } = useBookmarkContextMenu()
 const { bookmarkTree } = useBookmarks()
 const { settings, updateSettings } = useSettings()
 const focused = ref(false)
@@ -232,10 +234,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
             class="search-suggestion"
             :class="{ 'search-suggestion--active': activeIndex === index }"
             :href="bookmark.url"
+            data-bookmark-context
             role="option"
             :aria-selected="activeIndex === index"
             @mouseenter="activeIndex = index"
             @focus="activeIndex = index"
+            @contextmenu="openContextMenu(bookmark, $event)"
           >
             <FaviconImage :title="bookmark.title" :url="bookmark.url" :size="34" subtle />
             <span class="search-suggestion__copy">

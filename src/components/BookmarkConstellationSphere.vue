@@ -20,6 +20,7 @@ import {
 } from '../utils/constellationSphere'
 import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
+import { useBookmarkContextMenu } from '../composables/useBookmarkContextMenu'
 
 const DEFAULT_SPHERE_ZOOM = 1.18
 const SEARCH_FOCUS_ZOOM = 1.52
@@ -37,6 +38,8 @@ const emit = defineEmits<{
   openFolder: [node: BookmarkNode]
   changeLayout: [layout: 'grid']
 }>()
+
+const { openContextMenu } = useBookmarkContextMenu()
 
 const container = ref<HTMLElement>()
 const canvas = ref<HTMLCanvasElement>()
@@ -595,6 +598,8 @@ onBeforeUnmount(() => {
         :style="staticNodeStyle(node)"
         :href="node.url"
         :aria-label="nodeAriaLabel(node)"
+        data-bookmark-context
+        @contextmenu="openContextMenu(node.node, $event)"
       >
         <span class="constellation-node__halo" aria-hidden="true"></span>
         <span class="constellation-node__orb">
@@ -612,7 +617,9 @@ onBeforeUnmount(() => {
         :data-constellation-node-id="node.id"
         :style="staticNodeStyle(node)"
         :aria-label="nodeAriaLabel(node)"
+        data-bookmark-context
         @click="emit('openFolder', node.node)"
+        @contextmenu="openContextMenu(node.node, $event)"
       >
         <span class="constellation-node__halo" aria-hidden="true"></span>
         <span class="constellation-node__orb">

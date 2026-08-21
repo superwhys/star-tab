@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import BookmarkDashboard from './components/BookmarkDashboard.vue'
+import BookmarkContextMenu from './components/BookmarkContextMenu.vue'
 import ClockDisplay from './components/ClockDisplay.vue'
 import FolderOverlay from './components/FolderOverlay.vue'
 import IconSymbol from './components/IconSymbol.vue'
@@ -9,6 +10,7 @@ import SearchBar from './components/SearchBar.vue'
 import SettingsDrawer from './components/SettingsDrawer.vue'
 import StarBackground from './components/StarBackground.vue'
 import { usePageInteractionGuards } from './composables/usePageInteractionGuards'
+import { useBookmarkContextMenu } from './composables/useBookmarkContextMenu'
 import { isExtensionRuntime } from './services/browser'
 import { useStarPageStore } from './stores/starPage'
 import type { BookmarkLayout, BookmarkSearchState } from './types'
@@ -16,13 +18,15 @@ import type { BookmarkLayout, BookmarkSearchState } from './types'
 usePageInteractionGuards()
 
 const store = useStarPageStore()
+const { contextMenu, closeContextMenu } = useBookmarkContextMenu()
 const { settings, settingsOpen, activeFolder } = storeToRefs(store)
 const prototypeMode = computed(() => !isExtensionRuntime())
 const bookmarkSearchState = ref<BookmarkSearchState>({ query: '', matchIds: [] })
 
 function handleEscape(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
-  if (activeFolder.value) store.closeFolder()
+  if (contextMenu.value) closeContextMenu()
+  else if (activeFolder.value) store.closeFolder()
   else if (settingsOpen.value) settingsOpen.value = false
 }
 
@@ -79,5 +83,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
 
     <FolderOverlay />
     <SettingsDrawer />
+    <BookmarkContextMenu />
   </div>
 </template>

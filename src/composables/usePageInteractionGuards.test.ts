@@ -7,7 +7,7 @@ const TestHost = defineComponent({
   setup() {
     usePageInteractionGuards()
   },
-  template: '<div><span data-page-text>星页</span><input aria-label="搜索" /></div>',
+  template: '<div><span data-page-text>星页</span><button data-bookmark-context>书签</button><input aria-label="搜索" /></div>',
 })
 
 describe('usePageInteractionGuards', () => {
@@ -21,6 +21,16 @@ describe('usePageInteractionGuards', () => {
 
     expect(contextMenuEvent.defaultPrevented).toBe(true)
     expect(dragEvent.defaultPrevented).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('allows bookmarks to open the custom context menu', () => {
+    const wrapper = mount(TestHost, { attachTo: document.body })
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+
+    wrapper.get('[data-bookmark-context]').element.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
     wrapper.unmount()
   })
 
