@@ -5,15 +5,11 @@ import { useBookmarkContextMenu } from '../composables/useBookmarkContextMenu'
 import { useSearch } from '../composables/useSearch'
 import { useSettings } from '../composables/useSettings'
 import { getSearchEngine, SEARCH_ENGINES } from '../search/engines'
-import type { BookmarkSearchState, SearchEngineId } from '../types'
+import type { SearchEngineId } from '../types'
 import { bookmarkHostname, searchBookmarks, splitSearchHighlight } from '../utils/bookmarks'
 import { normalizeDirectUrl } from '../utils/urls'
 import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
-
-const emit = defineEmits<{
-  searchStateChange: [state: BookmarkSearchState]
-}>()
 
 const root = ref<HTMLElement>()
 const input = ref<HTMLInputElement>()
@@ -41,15 +37,6 @@ const activeSuggestion = computed(() => suggestions.value[activeIndex.value]?.no
 const activeDescendant = computed(() =>
   activeSuggestion.value ? suggestionId(activeIndex.value) : undefined,
 )
-const constellationSearchState = computed<BookmarkSearchState>(() => {
-  const enabled = Boolean(query.value.trim()) && !suggestionsDismissed.value
-  return {
-    query: enabled ? query.value.trim() : '',
-    matchIds: enabled ? suggestions.value.map(({ node }) => node.id) : [],
-    matches: enabled ? suggestions.value.map(({ node }) => node) : [],
-    activeId: enabled ? activeSuggestion.value?.id : undefined,
-  }
-})
 
 function suggestionId(index: number) {
   return `bookmark-search-option-${index}`
@@ -124,16 +111,6 @@ watch(query, () => {
 watch(suggestions, (items) => {
   if (activeIndex.value >= items.length) activeIndex.value = -1
 })
-
-watch(
-  constellationSearchState,
-  (state) => emit('searchStateChange', {
-    ...state,
-    matchIds: [...state.matchIds],
-    matches: [...(state.matches ?? [])],
-  }),
-  { immediate: true },
-)
 
 onMounted(() => window.addEventListener('keydown', handleShortcut))
 onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))

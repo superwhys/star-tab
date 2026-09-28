@@ -103,7 +103,10 @@ watch(editorState, async (state) => {
           <template v-if="editorState.mode === 'delete'">
             <div class="bookmark-editor__delete-copy">
               <span aria-hidden="true">✦</span>
-              <p>确定删除书签“<strong>{{ editorState.bookmark.title }}</strong>”吗？此操作会同步修改 Chrome 书签。</p>
+              <p>
+                确定删除书签“<strong>{{ editorState.bookmark.title }}</strong>”吗？
+                {{ editorState.bookmark.syncing === false ? '此操作只影响当前设备。' : '此操作会同步修改 Chrome 书签。' }}
+              </p>
             </div>
             <p v-if="error" class="bookmark-editor__error" role="alert">{{ error }}</p>
             <footer>
@@ -117,6 +120,13 @@ watch(editorState, async (state) => {
           <form v-else @submit.prevent="submitBookmark">
             <p v-if="editorState.mode === 'create'" class="bookmark-editor__destination">
               保存到：{{ editorState.parent.title || '书签' }}
+            </p>
+            <p
+              v-if="editorState.mode === 'create' && editorState.parent.syncing === false"
+              class="bookmark-editor__sync-warning"
+              role="note"
+            >
+              此分组仅保存在当前设备，新书签不会出现在其他设备。
             </p>
             <label>
               <span>名称</span>
@@ -233,6 +243,17 @@ watch(editorState, async (state) => {
   margin: 0;
   color: rgba(190, 204, 247, 0.55);
   font-size: 11px;
+}
+
+.bookmark-editor__sync-warning {
+  margin: -6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(235, 202, 131, 0.14);
+  border-radius: 9px;
+  background: rgba(167, 119, 42, 0.07);
+  color: rgba(238, 213, 161, 0.72);
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .bookmark-editor__delete-copy {

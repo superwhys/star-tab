@@ -7,6 +7,7 @@ import type {
 
 type ChromeBookmarkNode = chrome.bookmarks.BookmarkTreeNode & {
   folderType?: BookmarkNode['folderType']
+  syncing?: boolean
 }
 
 export function normalizeBookmarkTree(nodes: ChromeBookmarkNode[]): BookmarkNode[] {
@@ -18,6 +19,7 @@ export function normalizeBookmarkTree(nodes: ChromeBookmarkNode[]): BookmarkNode
     url: node.url,
     children: normalizeBookmarkTree((node.children ?? []) as ChromeBookmarkNode[]),
     folderType: node.folderType,
+    syncing: node.syncing,
   }))
 }
 
@@ -31,6 +33,7 @@ function defaultFolderTitle(folderType?: BookmarkNode['folderType']): string {
 export function findDefaultBookmarkFolder(nodes: BookmarkNode[]): BookmarkNode | undefined {
   const topLevel = nodes.length === 1 && nodes[0]?.id === '0' ? nodes[0].children : nodes
   return (
+    topLevel.find((node) => node.folderType === 'bookmarks-bar' && node.syncing === true) ??
     topLevel.find((node) => node.folderType === 'bookmarks-bar') ??
     topLevel.find((node) => node.id === '1') ??
     topLevel.find((node) => /书签栏|bookmarks bar/i.test(node.title)) ??
@@ -59,6 +62,7 @@ export function flattenFolders(nodes: BookmarkNode[]): FolderOption[] {
         title: node.title || '未命名文件夹',
         depth,
         folderType: node.folderType,
+        syncing: node.syncing,
       })
       visit(node.children, depth + 1)
     })

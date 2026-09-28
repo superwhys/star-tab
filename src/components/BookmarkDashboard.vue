@@ -1,20 +1,15 @@
 <script setup lang="ts">
 import { useBookmarks } from '../composables/useBookmarks'
-import type { BookmarkLayout, BookmarkNode, BookmarkSearchState } from '../types'
-import BookmarkConstellationSphere from './BookmarkConstellationSphere.vue'
+import type { BookmarkNode } from '../types'
 import BookmarkSection from './BookmarkSection.vue'
 import IconSymbol from './IconSymbol.vue'
 
 defineProps<{
   compact?: boolean
-  layout?: BookmarkLayout
-  motion?: boolean
-  searchState?: BookmarkSearchState
 }>()
 
 const emit = defineEmits<{
   openSettings: []
-  changeLayout: [layout: BookmarkLayout]
 }>()
 
 const { loading, bookmarkError, visibleSections, openFolder, refreshBookmarks } = useBookmarks()
@@ -25,12 +20,9 @@ function handleFolder(node: BookmarkNode) {
 </script>
 
 <template>
-  <div
-    class="bookmark-dashboard"
-    :class="{ 'bookmark-dashboard--constellation': layout === 'constellation' }"
-  >
+  <div class="bookmark-dashboard">
     <div v-if="loading" class="bookmark-skeleton" aria-label="正在加载书签">
-      <span v-for="index in 8" :key="index"></span>
+      <span v-for="index in 10" :key="index"></span>
     </div>
 
     <div v-else-if="bookmarkError" class="dashboard-message dashboard-message--error">
@@ -41,24 +33,13 @@ function handleFolder(node: BookmarkNode) {
       </button>
     </div>
 
-    <BookmarkConstellationSphere
-      v-else-if="visibleSections.length && layout === 'constellation'"
-      :sections="visibleSections"
-      :motion="motion"
-      :search-state="searchState"
-      @open-folder="handleFolder"
-      @change-layout="emit('changeLayout', $event)"
-    />
-
     <template v-else-if="visibleSections.length">
       <BookmarkSection
-        v-for="(section, index) in visibleSections"
+        v-for="section in visibleSections"
         :key="section.id"
         :section="section"
         :compact="compact"
-        :show-layout-shortcut="index === 0"
         @open-folder="handleFolder"
-        @change-layout="emit('changeLayout', 'constellation')"
       />
     </template>
 

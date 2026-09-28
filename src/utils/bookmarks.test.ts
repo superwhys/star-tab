@@ -37,7 +37,40 @@ describe('bookmark utilities', () => {
       type: 'bookmark',
       title: 'Vue',
       url: 'https://vuejs.org',
+      syncing: false,
     })
+  })
+
+  it('prefers the account bookmarks bar when Chrome exposes local and synced trees', () => {
+    const result = normalizeBookmarkTree([
+      {
+        id: '0',
+        title: '',
+        syncing: false,
+        children: [
+          {
+            id: '1',
+            parentId: '0',
+            title: '书签栏',
+            folderType: 'bookmarks-bar',
+            syncing: false,
+          },
+          {
+            id: '4',
+            parentId: '0',
+            title: '书签栏',
+            folderType: 'bookmarks-bar',
+            syncing: true,
+          },
+        ],
+      },
+    ])
+
+    expect(findDefaultBookmarkFolder(result)?.id).toBe('4')
+    expect(flattenFolders(result)).toEqual([
+      expect.objectContaining({ id: '1', syncing: false }),
+      expect.objectContaining({ id: '4', syncing: true }),
+    ])
   })
 
   it('finds the bookmarks bar and nested folders', () => {

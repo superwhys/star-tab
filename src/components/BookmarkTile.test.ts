@@ -25,6 +25,7 @@ describe('BookmarkTile', () => {
     const link = wrapper.get('a')
     expect(link.attributes('href')).toBe('https://vuejs.org')
     expect(wrapper.text()).toContain('Vue.js')
+    expect(wrapper.get('.bookmark-tile__detail').text()).toBe('vuejs.org')
     expect(wrapper.find('.favicon > span').text()).toBe('V')
   })
 
@@ -41,6 +42,6 @@ describe('BookmarkTile', () => {
     await wrapper.get('button').trigger('click')
     expect(wrapper.emitted('openFolder')?.[0]).toEqual([folder])
     expect(wrapper.find('a').exists()).toBe(false)
-    expect(wrapper.find('.bookmark-tile__count').exists()).toBe(false)
+    expect(wrapper.get('.bookmark-tile__detail').text()).toBe('1 个项目')
   })
 })

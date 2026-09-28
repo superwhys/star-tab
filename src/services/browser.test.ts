@@ -57,6 +57,7 @@ describe('settings persistence adapter', () => {
     expect(await readSettingsSyncPreference()).toBe(true)
     expect(localValues[SETTINGS_SYNC_PREFERENCE_KEY]).toBe(true)
     expect(localValues[SETTINGS_STORAGE_KEY]).toBeUndefined()
+    expect(syncValues[SETTINGS_STORAGE_KEY]).not.toHaveProperty('visibleFolderIds')
   })
 
   it('writes only the plain snapshot to Chrome Storage', async () => {

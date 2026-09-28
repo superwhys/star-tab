@@ -8,6 +8,7 @@ export interface BookmarkNode {
   url?: string
   children: BookmarkNode[]
   folderType?: 'bookmarks-bar' | 'other' | 'mobile' | 'managed'
+  syncing?: boolean
 }
 
 export interface FolderOption {
@@ -15,22 +16,16 @@ export interface FolderOption {
   title: string
   depth: number
   folderType?: BookmarkNode['folderType']
+  syncing?: boolean
 }
 
 export type BackgroundKind = 'canvas-drift' | 'canvas-meteor' | 'ambient'
 
 export type SettingsSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
-export type BookmarkLayout = 'grid' | 'constellation'
+export type BookmarkLayout = 'grid'
 
 export type SearchEngineId = 'default' | 'google' | 'bing' | 'baidu' | 'duckduckgo'
-
-export interface BookmarkSearchState {
-  query: string
-  matchIds: string[]
-  matches?: BookmarkNode[]
-  activeId?: string
-}
 
 export interface BookmarkSearchResult {
   node: BookmarkNode

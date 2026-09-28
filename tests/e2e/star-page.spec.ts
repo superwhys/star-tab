@@ -5,16 +5,59 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: '书签栏' })).toBeVisible()
 })
 
-test('keeps the layout and add buttons on one row', async ({ page }) => {
-  const layoutButton = page.getByRole('button', { name: '切换到 3D 星球布局' })
+test('keeps the bookmark heading and add button on one row', async ({ page }) => {
+  const heading = page.getByRole('heading', { name: '书签栏' })
   const addButton = page.getByRole('button', { name: '在书签栏新增书签' })
-  const [layoutBox, addBox] = await Promise.all([layoutButton.boundingBox(), addButton.boundingBox()])
+  const [headingBox, addBox] = await Promise.all([heading.boundingBox(), addButton.boundingBox()])
 
-  expect(layoutBox).not.toBeNull()
+  expect(headingBox).not.toBeNull()
   expect(addBox).not.toBeNull()
-  expect(layoutBox!.x + layoutBox!.width).toBeLessThanOrEqual(addBox!.x)
-  expect(Math.abs((layoutBox!.y + layoutBox!.height / 2) - (addBox!.y + addBox!.height / 2))).toBeLessThan(2)
+  expect(headingBox!.x + headingBox!.width).toBeLessThanOrEqual(addBox!.x)
+  expect(Math.abs((headingBox!.y + headingBox!.height / 2) - (addBox!.y + addBox!.height / 2))).toBeLessThan(2)
 })
+
+for (const width of [320, 390]) {
+  test(`keeps every bookmark card clickable without overflow at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.evaluate(() => {
+      document.addEventListener(
+        'click',
+        (event) => {
+          const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a.bookmark-tile')
+          if (!link) return
+          event.preventDefault()
+          ;(window as typeof window & { openedBookmark?: string }).openedBookmark = link.href
+        },
+        true,
+      )
+    })
+
+    const cards = page.locator('.bookmark-dashboard .bookmark-tile')
+    await expect(cards).toHaveCount(10)
+    for (const card of await cards.all()) {
+      await card.scrollIntoViewIfNeeded()
+      const box = await card.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      expect(box!.height).toBeGreaterThanOrEqual(44)
+
+      const href = await card.getAttribute('href')
+      await card.click()
+      if (href) {
+        await expect.poll(() => page.evaluate(() => (window as typeof window & { openedBookmark?: string }).openedBookmark))
+          .toBe(new URL(href).href)
+      } else {
+        await expect(page.getByRole('dialog')).toBeVisible()
+        await page.getByRole('button', { name: '关闭文件夹' }).click()
+        await expect(page.getByRole('dialog')).toBeHidden()
+      }
+    }
+
+    const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+    expect(hasHorizontalOverflow).toBe(false)
+  })
+}
 
 test('search prototype gives visible feedback', async ({ page }) => {
   const search = page.getByPlaceholder('搜索书签或网页…')
@@ -100,49 +143,37 @@ test('enables Chrome configuration sync and restores the preference', async ({ p
   const syncToggle = page.getByRole('checkbox', { name: /Chrome 配置同步/ })
   await page.locator('label.setting-row').filter({ hasText: 'Chrome 配置同步' }).click()
   await expect(syncToggle).toBeChecked()
-  await expect(page.getByText('设置已同步到 Chrome')).toBeVisible()
+  await expect(page.getByText('显示设置已同步，分组保存在本机')).toBeVisible()
 
   await page.reload()
   await page.getByRole('button', { name: '打开设置' }).click()
   await expect(page.getByRole('checkbox', { name: /Chrome 配置同步/ })).toBeChecked()
 })
 
-test('links bookmark search to the 3D sphere and restores the view after clearing', async ({ page }) => {
-  await page.getByRole('button', { name: '切换到 3D 星球布局' }).click()
-  const sphere = page.getByRole('region', { name: '可旋转和缩放的书签星球' })
-  const search = page.getByPlaceholder('搜索书签或网页…')
-  const vueNode = page.getByRole('link', { name: '打开书签 Vue.js' })
+test('restores legacy sphere settings as a bookmark grid without losing preferences', async ({ page }) => {
+  await page.evaluate(() => {
+    const settings = JSON.parse(localStorage.getItem('star-page:settings')!)
+    localStorage.setItem('star-page:settings', JSON.stringify({
+      ...settings,
+      bookmarkLayout: 'constellation',
+      visibleFolderIds: ['1', '120'],
+      backgroundId: 'violet-orbit',
+      showSeconds: false,
+    }))
+  })
+  await page.reload()
 
-  await search.fill('Vue')
-  await expect(page.getByText('星图定位')).toBeVisible()
-  await expect(vueNode).toHaveClass(/constellation-node--search-focus/)
-  await expect(sphere.locator('output')).toHaveText('152%')
+  await expect(page.locator('.bookmark-section h2')).toHaveText(['书签栏', '设计灵感'])
+  await expect(page.getByRole('link', { name: '打开 Dribbble' })).toHaveAttribute('href', 'https://dribbble.com')
+  await expect(page.getByRole('button', { name: /3D 星球/ })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: '可旋转和缩放的书签星球' })).toHaveCount(0)
+  await expect(page.locator('.star-background')).toHaveClass(/background--violet-orbit/)
+  await expect(page.locator('.clock__seconds')).toHaveCount(0)
 
-  await expect(sphere).toHaveAttribute('data-search-camera', 'focused', { timeout: 5000 })
-  const [sphereBox, nodeBox] = await Promise.all([sphere.boundingBox(), vueNode.boundingBox()])
-  expect(sphereBox).not.toBeNull()
-  expect(nodeBox).not.toBeNull()
-  expect(Math.abs((nodeBox!.x + nodeBox!.width / 2) - (sphereBox!.x + sphereBox!.width / 2))).toBeLessThan(28)
-  expect(Math.abs((nodeBox!.y + nodeBox!.height / 2) - (sphereBox!.y + sphereBox!.height / 2))).toBeLessThan(28)
-
-  await search.fill('V')
-  await search.press('ArrowDown')
-  await search.press('ArrowDown')
-  const viteNode = page.getByRole('link', { name: '打开书签 Vite' })
-  await expect(viteNode).toHaveClass(/constellation-node--search-focus/)
-  await expect(vueNode).not.toHaveClass(/constellation-node--search-focus/)
-  await expect(page.locator('.constellation-search-status strong')).toHaveText('Vite')
-
-  await search.fill('')
-  await expect(page.getByText('星图定位')).toBeHidden()
-  await expect(vueNode).not.toHaveClass(/constellation-node--search-focus/)
-  await expect(sphere.locator('output')).toHaveText('118%')
-
-  await search.fill('GitLab')
-  const temporaryNode = page.getByRole('link', { name: '打开书签 GitLab' })
-  await expect(temporaryNode).toHaveAttribute('data-constellation-node-id', 'search:node:118')
-  await expect(temporaryNode).toHaveClass(/constellation-node--search-focus/)
-  await expect(sphere).toHaveAttribute('data-search-camera', 'focused', { timeout: 5000 })
+  await page.getByRole('button', { name: '打开设置' }).click()
+  await page.getByText('显示秒数', { exact: true }).click()
+  await expect(page.getByText('设置已保存到本机')).toBeVisible()
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('star-page:settings')!).bookmarkLayout)).toBe('grid')
 })
 
 test('opens a custom context menu for bookmarks and folders', async ({ page }) => {
@@ -162,6 +193,7 @@ test('opens a custom context menu for bookmarks and folders', async ({ page }) =
 })
 
 test('creates, edits and deletes a bookmark', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 580 })
   await page.getByRole('button', { name: '在书签栏新增书签' }).click()
   const createDialog = page.getByRole('dialog', { name: '新增书签' })
   await createDialog.getByLabel('名称').fill('Example Site')
@@ -290,4 +322,58 @@ test('renders a visibly changing animated star layer for every background', asyn
 
     expect(after, `${name} should animate`).not.toBe(before)
   }
+})
+
+test('keeps six distinct canvas star fields when motion is disabled', async ({ page }) => {
+  await page.getByRole('button', { name: '打开设置' }).click()
+  await page.getByText('动态星空', { exact: true }).click()
+  await expect(page.getByText('设置已保存到本机')).toBeVisible()
+  await page.reload()
+
+  const canvas = page.locator('.star-background__canvas')
+  await expect(canvas).toHaveAttribute('data-animated', 'false')
+  await page.getByRole('button', { name: '打开设置' }).click()
+  const starFields = new Set<string>()
+
+  for (const name of ['星河流尘', '流星夜', '靛蓝星云', '紫曜轨道', '月海薄雾', '蓝星地平线']) {
+    const preset = page.getByRole('button', { name: new RegExp(name) })
+    await preset.click()
+    await expect(preset).toHaveAttribute('aria-pressed', 'true')
+    const frame = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL())
+    expect(starFields.has(frame), `${name} should have its own canvas composition`).toBe(false)
+    starFields.add(frame)
+
+    await page.waitForTimeout(120)
+    expect(await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL()), `${name} should stay still`)
+      .toBe(frame)
+  }
+})
+
+test('freezes hidden stars and resumes without jumping after a minute', async ({ page }) => {
+  const start = new Date('2026-09-28T03:00:00Z')
+  await page.clock.install({ time: start })
+  await page.reload()
+  await expect(page.getByRole('heading', { name: '书签栏' })).toBeVisible()
+  await page.clock.pauseAt(new Date(start.getTime() + 1000))
+  await page.clock.runFor(80)
+
+  const canvas = page.locator('.star-background__canvas')
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  await expect(canvas).toHaveAttribute('data-animated', 'false')
+  const paused = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL())
+  await page.clock.runFor(60_000)
+  expect(await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL())).toBe(paused)
+
+  await page.evaluate(() => {
+    Reflect.deleteProperty(document, 'hidden')
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  await expect(canvas).toHaveAttribute('data-animated', 'true')
+  await page.clock.runFor(16)
+  expect(await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL())).toBe(paused)
+  await page.clock.runFor(600)
+  expect(await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL())).not.toBe(paused)
 })

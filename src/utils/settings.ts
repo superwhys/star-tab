@@ -1,6 +1,6 @@
 import { BACKGROUND_IDS } from '../backgrounds'
 import { isSearchEngineId } from '../search/engines'
-import type { BookmarkLayout, StarPageSettings } from '../types'
+import type { StarPageSettings } from '../types'
 
 export const SETTINGS_STORAGE_KEY = 'star-page:settings'
 
@@ -28,9 +28,7 @@ export function sanitizeSettings(value: unknown): StarPageSettings {
     visibleFolderIds: Array.isArray(candidate.visibleFolderIds)
       ? candidate.visibleFolderIds.filter((id): id is string => typeof id === 'string')
       : [],
-    bookmarkLayout: isBookmarkLayout(candidate.bookmarkLayout)
-      ? candidate.bookmarkLayout
-      : DEFAULT_SETTINGS.bookmarkLayout,
+    bookmarkLayout: DEFAULT_SETTINGS.bookmarkLayout,
     searchEngineId: isSearchEngineId(candidate.searchEngineId)
       ? candidate.searchEngineId
       : DEFAULT_SETTINGS.searchEngineId,
@@ -41,8 +39,4 @@ export function sanitizeSettings(value: unknown): StarPageSettings {
     motionEnabled:
       typeof candidate.motionEnabled === 'boolean' ? candidate.motionEnabled : DEFAULT_SETTINGS.motionEnabled,
   }
-}
-
-function isBookmarkLayout(value: unknown): value is BookmarkLayout {
-  return value === 'grid' || value === 'constellation'
 }

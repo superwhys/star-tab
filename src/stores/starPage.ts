@@ -16,6 +16,21 @@ import {
 import { findBookmarkNode, findDefaultBookmarkFolder, flattenFolders } from '../utils/bookmarks'
 import { DEFAULT_SETTINGS, sanitizeSettings } from '../utils/settings'
 
+function hasStoredSettings(stored: { value?: unknown; exists: boolean }): stored is {
+  value: Record<string, unknown>
+  exists: true
+} {
+  return stored.exists && Boolean(stored.value && typeof stored.value === 'object')
+}
+
+function mergeSyncedSettings(local: StarPageSettings, synced: Record<string, unknown>): StarPageSettings {
+  return sanitizeSettings({
+    ...local,
+    ...synced,
+    visibleFolderIds: local.visibleFolderIds,
+  })
+}
+
 export const useStarPageStore = defineStore('star-page', () => {
   const bookmarkTree = ref<BookmarkNode[]>([])
   const settings = ref<StarPageSettings>({ ...DEFAULT_SETTINGS })
@@ -50,14 +65,21 @@ export const useStarPageStore = defineStore('star-page', () => {
 
     try {
       settingsSyncEnabled.value = await readSettingsSyncPreference()
-      let stored = await readSettings(settingsSyncEnabled.value ? 'sync' : 'local')
-      if (settingsSyncEnabled.value && !stored.exists) {
-        const local = await readSettings('local')
-        if (local.exists) stored = local
+      const local = await readSettings('local')
+      settingsExisted = hasStoredSettings(local)
+      settings.value = sanitizeSettings(local.value)
+
+      if (settingsSyncEnabled.value) {
+        const synced = await readSettings('sync')
+        if (hasStoredSettings(synced)) {
+          settings.value = mergeSyncedSettings(settings.value, synced.value)
+          if (Object.prototype.hasOwnProperty.call(synced.value, 'visibleFolderIds')) {
+            await writeSettings(settings.value, 'sync')
+          }
+        } else if (settingsExisted) {
+          await writeSettings(settings.value, 'sync')
+        }
       }
-      settingsExisted = stored.exists && Boolean(stored.value && typeof stored.value === 'object')
-      settings.value = sanitizeSettings(stored.value)
-      if (settingsSyncEnabled.value && settingsExisted) await writeSettings(settings.value, 'sync')
     } catch (error) {
       settingsExisted = false
       settings.value = { ...DEFAULT_SETTINGS }
@@ -118,8 +140,12 @@ export const useStarPageStore = defineStore('star-page', () => {
 
   async function refreshSyncedSettings() {
     const stored = await readSettings('sync')
-    if (!stored.exists || !stored.value || typeof stored.value !== 'object') return
-    settings.value = sanitizeSettings(stored.value)
+    if (!hasStoredSettings(stored)) return
+    settings.value = mergeSyncedSettings(settings.value, stored.value)
+    await writeSettings(settings.value, 'local')
+    if (Object.prototype.hasOwnProperty.call(stored.value, 'visibleFolderIds')) {
+      await writeSettings(settings.value, 'sync')
+    }
     settingsExisted = true
   }
 
@@ -131,11 +157,13 @@ export const useStarPageStore = defineStore('star-page', () => {
     settingsError.value = ''
 
     try {
+      await saveQueue.catch(() => undefined)
       if (enabled) {
         const synced = await readSettings('sync')
-        if (synced.exists && synced.value && typeof synced.value === 'object') {
-          settings.value = sanitizeSettings(synced.value)
+        if (hasStoredSettings(synced)) {
+          settings.value = mergeSyncedSettings(settings.value, synced.value)
         }
+        await writeSettings(settings.value, 'local')
         await writeSettings(settings.value, 'sync')
       } else {
         await writeSettings(settings.value, 'local')
@@ -171,7 +199,10 @@ export const useStarPageStore = defineStore('star-page', () => {
 
     const operation = saveQueue
       .catch(() => undefined)
-      .then(() => writeSettings(snapshot, storageArea))
+      .then(async () => {
+        await writeSettings(snapshot, 'local')
+        if (storageArea === 'sync') await writeSettings(snapshot, 'sync')
+      })
       .then(() => {
         if (requestId !== saveRequestId) return
         markSettingsSaved()

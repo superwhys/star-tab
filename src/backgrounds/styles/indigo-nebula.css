@@ -1,12 +1,28 @@
 .background--indigo-nebula {
   background:
-    radial-gradient(ellipse at 30% 32%, rgba(58, 91, 188, 0.5), transparent 27%),
-    radial-gradient(ellipse at 76% 68%, rgba(57, 44, 145, 0.36), transparent 30%),
-    linear-gradient(142deg, #06091c 0%, #111a47 53%, #08091d 100%);
+    radial-gradient(ellipse 38% 40% at 25% 30%, rgba(40, 63, 112, 0.32), transparent 75%),
+    radial-gradient(ellipse 35% 40% at 77% 66%, rgba(52, 45, 92, 0.24), transparent 76%),
+    linear-gradient(142deg, #03060e 0%, #080c1a 53%, #03050c 100%);
 }
 
 .background--indigo-nebula .star-background__nebula {
   background:
-    radial-gradient(ellipse at 20% 38%, rgba(80, 124, 245, 0.34), transparent 31%),
-    radial-gradient(ellipse at 76% 67%, rgba(93, 69, 224, 0.27), transparent 34%);
+    radial-gradient(ellipse 10% 18% at 32% 32%, rgba(3, 6, 16, 0.5), transparent 74%),
+    radial-gradient(ellipse 9% 13% at 71% 60%, rgba(3, 5, 13, 0.4), transparent 74%),
+    radial-gradient(ellipse 17% 26% at 20% 28%, rgba(107, 128, 173, 0.24), transparent 74%),
+    radial-gradient(ellipse 27% 12% at 31% 37%, rgba(66, 104, 156, 0.23), transparent 72%),
+    radial-gradient(ellipse 21% 28% at 79% 63%, rgba(114, 101, 155, 0.2), transparent 75%),
+    radial-gradient(ellipse 29% 12% at 69% 73%, rgba(65, 85, 145, 0.2), transparent 73%);
+  opacity: 0.8;
+  filter: blur(22px);
+  animation: indigo-cloud-drift 58s ease-in-out infinite alternate paused;
+}
+
+@keyframes indigo-cloud-drift {
+  from { transform: scale(1.08) translate3d(-1%, 0.5%, 0) rotate(-1deg); }
+  to { transform: scale(1.12) translate3d(1%, -0.5%, 0) rotate(1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .background--indigo-nebula .star-background__nebula { animation: none; }
 }

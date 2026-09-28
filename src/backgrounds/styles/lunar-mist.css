@@ -1,12 +1,24 @@
 .background--lunar-mist {
   background:
-    radial-gradient(circle at 78% 21%, rgba(188, 207, 236, 0.28), transparent 13%),
-    radial-gradient(ellipse at 54% 52%, rgba(86, 108, 144, 0.25), transparent 38%),
-    linear-gradient(155deg, #080d18 0%, #1b2638 51%, #070a15 100%);
+    radial-gradient(ellipse 85% 35% at 50% 81%, rgba(79, 99, 111, 0.13), transparent 78%),
+    linear-gradient(to bottom, #04080d 0%, #081118 61%, #0b141b 80%, #04080e 100%);
 }
 
 .background--lunar-mist .star-background__nebula {
   background:
-    radial-gradient(ellipse at 66% 37%, rgba(184, 212, 245, 0.2), transparent 34%),
-    radial-gradient(ellipse at 31% 66%, rgba(92, 130, 181, 0.2), transparent 36%);
+    radial-gradient(ellipse 66% 6% at 20% 61%, rgba(174, 193, 197, 0.22), transparent 76%),
+    radial-gradient(ellipse 72% 7% at 76% 76%, rgba(137, 165, 179, 0.2), transparent 76%),
+    radial-gradient(ellipse 62% 5% at 32% 87%, rgba(183, 194, 193, 0.12), transparent 76%);
+  opacity: 0.75;
+  filter: blur(20px);
+  animation: lunar-mist-drift 46s ease-in-out infinite alternate paused;
+}
+
+@keyframes lunar-mist-drift {
+  from { transform: scale(1.12) translate3d(-3%, 0, 0); }
+  to { transform: scale(1.12) translate3d(3%, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .background--lunar-mist .star-background__nebula { animation: none; }
 }

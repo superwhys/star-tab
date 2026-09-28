@@ -1,13 +1,11 @@
 .background--meteor-night {
   background:
-    radial-gradient(ellipse at 67% 26%, rgba(61, 84, 172, 0.28), transparent 29%),
-    linear-gradient(153deg, #050718 0%, #101735 55%, #050719 100%);
+    radial-gradient(ellipse at 78% 8%, rgba(35, 62, 91, 0.13), transparent 42%),
+    linear-gradient(165deg, #02050b 0%, #060d18 54%, #02050b 100%);
 }
 
 .background--meteor-night .star-background__nebula {
-  background: linear-gradient(120deg, transparent 34%, rgba(104, 133, 236, 0.2) 50%, transparent 66%);
-}
-
-.app-shell--motion .background--meteor-night .star-background__nebula {
-  animation-duration: 5.5s;
+  background: radial-gradient(ellipse 65% 40% at 78% 8%, rgba(62, 92, 129, 0.1), transparent 75%);
+  opacity: 0.3;
+  animation: none;
 }

@@ -11,7 +11,7 @@ describe('settings migration', () => {
       version: 7,
       backgroundId: 'violet-orbit',
       visibleFolderIds: ['1', 2, null, '110'],
-      bookmarkLayout: 'constellation',
+      bookmarkLayout: 'grid',
       searchEngineId: 'bing',
       showSeconds: false,
       compactMode: true,
@@ -22,7 +22,7 @@ describe('settings migration', () => {
       version: 3,
       backgroundId: 'violet-orbit',
       visibleFolderIds: ['1', '110'],
-      bookmarkLayout: 'constellation',
+      bookmarkLayout: 'grid',
       searchEngineId: 'bing',
       showSeconds: false,
       compactMode: true,
@@ -36,6 +36,8 @@ describe('settings migration', () => {
 
   it('migrates old settings to the grid layout and rejects unknown layouts', () => {
     expect(sanitizeSettings({ version: 1 }).bookmarkLayout).toBe('grid')
+    expect(sanitizeSettings({ bookmarkLayout: 'constellation' }).bookmarkLayout).toBe('grid')
+    expect(sanitizeSettings({ bookmarkLayout: 'planet' }).bookmarkLayout).toBe('grid')
     expect(sanitizeSettings({ bookmarkLayout: 'list' }).bookmarkLayout).toBe('grid')
   })
 

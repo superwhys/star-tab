@@ -1,10 +1,15 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { SETTINGS_SYNC_PREFERENCE_KEY } from '../services/browser'
 import { findBookmarkNode } from '../utils/bookmarks'
+import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from '../utils/settings'
 import { useStarPageStore } from './starPage'
 
 describe('star page store', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
 
   it('loads mock bookmarks and defaults to the bookmarks bar', async () => {
     const store = useStarPageStore()
@@ -36,7 +41,7 @@ describe('star page store', () => {
     await firstStore.init()
     await firstStore.updateSettings({
       backgroundId: 'violet-orbit',
-      bookmarkLayout: 'constellation',
+      bookmarkLayout: 'grid',
       searchEngineId: 'duckduckgo',
       showSeconds: false,
     })
@@ -47,9 +52,28 @@ describe('star page store', () => {
     await restoredStore.init()
 
     expect(restoredStore.settings.backgroundId).toBe('violet-orbit')
-    expect(restoredStore.settings.bookmarkLayout).toBe('constellation')
+    expect(restoredStore.settings.bookmarkLayout).toBe('grid')
     expect(restoredStore.settings.searchEngineId).toBe('duckduckgo')
     expect(restoredStore.settings.showSeconds).toBe(false)
+  })
+
+  it('restores retired sphere settings as a grid while keeping saved preferences', async () => {
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_SETTINGS,
+        bookmarkLayout: 'constellation',
+        visibleFolderIds: ['120'],
+        compactMode: true,
+      }),
+    )
+
+    const store = useStarPageStore()
+    await store.init()
+
+    expect(store.settings.bookmarkLayout).toBe('grid')
+    expect(store.visibleSections.map((section) => section.id)).toEqual(['120'])
+    expect(store.settings.compactMode).toBe(true)
   })
 
   it('reorders visible folders and persists their homepage order', async () => {
@@ -99,5 +123,42 @@ describe('star page store', () => {
     await restoredStore.init()
     expect(restoredStore.settingsSyncEnabled).toBe(true)
     expect(restoredStore.settings).toMatchObject({ backgroundId: 'blue-horizon', compactMode: true })
+  })
+
+  it('keeps bookmark group selection local while applying synced display settings', async () => {
+    const firstStore = useStarPageStore()
+    await firstStore.init()
+    await firstStore.updateSettings({
+      backgroundId: 'blue-horizon',
+      visibleFolderIds: ['110'],
+    })
+    await firstStore.setSettingsSyncEnabled(true)
+
+    const syncStorageKey = `${SETTINGS_STORAGE_KEY}:sync`
+    const syncedSettings = JSON.parse(localStorage.getItem(syncStorageKey)!)
+    expect(syncedSettings).not.toHaveProperty('visibleFolderIds')
+    localStorage.setItem(
+      syncStorageKey,
+      JSON.stringify({ ...syncedSettings, bookmarkLayout: 'constellation', visibleFolderIds: ['110'] }),
+    )
+
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_SETTINGS,
+        backgroundId: 'violet-orbit',
+        visibleFolderIds: ['120'],
+      }),
+    )
+    localStorage.setItem(SETTINGS_SYNC_PREFERENCE_KEY, 'true')
+
+    setActivePinia(createPinia())
+    const secondStore = useStarPageStore()
+    await secondStore.init()
+
+    expect(secondStore.settings.backgroundId).toBe('blue-horizon')
+    expect(secondStore.settings.bookmarkLayout).toBe('grid')
+    expect(secondStore.settings.visibleFolderIds).toEqual(['120'])
+    expect(JSON.parse(localStorage.getItem(syncStorageKey)!)).not.toHaveProperty('visibleFolderIds')
   })
 })

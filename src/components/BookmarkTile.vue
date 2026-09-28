@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BookmarkNode } from '../types'
 import { useBookmarkContextMenu } from '../composables/useBookmarkContextMenu'
+import { bookmarkHostname } from '../utils/bookmarks'
 import FaviconImage from './FaviconImage.vue'
 import IconSymbol from './IconSymbol.vue'
 
@@ -26,8 +27,11 @@ const { openContextMenu } = useBookmarkContextMenu()
     data-bookmark-context
     @contextmenu="openContextMenu(props.node, $event)"
   >
-    <FaviconImage :title="node.title" :url="node.url" :size="64" />
-    <span class="bookmark-tile__title" :title="node.title">{{ node.title }}</span>
+    <FaviconImage :title="node.title" :url="node.url" :size="40" />
+    <span class="bookmark-tile__copy">
+      <span class="bookmark-tile__title" :title="node.title">{{ node.title }}</span>
+      <span class="bookmark-tile__detail">{{ bookmarkHostname(node.url) }}</span>
+    </span>
   </a>
 
   <button
@@ -55,6 +59,10 @@ const { openContextMenu } = useBookmarkContextMenu()
         />
       </template>
     </span>
-    <span class="bookmark-tile__title" :title="node.title">{{ node.title }}</span>
+    <span class="bookmark-tile__copy">
+      <span class="bookmark-tile__title" :title="node.title">{{ node.title }}</span>
+      <span class="bookmark-tile__detail">{{ node.children.length }} 个项目</span>
+    </span>
+    <IconSymbol class="bookmark-tile__arrow" name="chevron-right" :size="14" />
   </button>
 </template>

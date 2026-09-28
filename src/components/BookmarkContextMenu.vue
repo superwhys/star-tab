@@ -10,6 +10,8 @@ const copied = ref(false)
 const { contextMenu, closeContextMenu } = useBookmarkContextMenu()
 const { openCreateBookmark, openEditBookmark, openDeleteBookmark } = useBookmarkEditor()
 let copiedTimer = 0
+let openingScrollX = 0
+let openingScrollY = 0
 
 const menuStyle = computed(() => {
   const state = contextMenu.value
@@ -65,18 +67,29 @@ function handlePointerDown(event: PointerEvent) {
   if (contextMenu.value && !menu.value?.contains(event.target as Node)) closeContextMenu()
 }
 
+function handleScroll(event: Event) {
+  if (
+    (event.target === document || event.target === window)
+    && window.scrollX === openingScrollX
+    && window.scrollY === openingScrollY
+  ) return
+  closeContextMenu()
+}
+
 watch(contextMenu, async (state) => {
   copied.value = false
   if (!state) return
+  openingScrollX = window.scrollX
+  openingScrollY = window.scrollY
   await nextTick()
-  menu.value?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+  menu.value?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true })
 })
 
 onMounted(() => {
   document.addEventListener('pointerdown', handlePointerDown, true)
   window.addEventListener('blur', closeContextMenu)
   window.addEventListener('resize', closeContextMenu)
-  window.addEventListener('scroll', closeContextMenu, true)
+  window.addEventListener('scroll', handleScroll, true)
 })
 
 onBeforeUnmount(() => {
@@ -84,7 +97,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', handlePointerDown, true)
   window.removeEventListener('blur', closeContextMenu)
   window.removeEventListener('resize', closeContextMenu)
-  window.removeEventListener('scroll', closeContextMenu, true)
+  window.removeEventListener('scroll', handleScroll, true)
 })
 </script>
 

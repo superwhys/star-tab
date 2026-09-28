@@ -154,7 +154,7 @@ export async function writeSettings(
   settings: StarPageSettings,
   area: SettingsStorageArea = 'local',
 ): Promise<void> {
-  const snapshot = createSettingsSnapshot(settings)
+  const snapshot = area === 'sync' ? createSyncedSettingsSnapshot(settings) : createSettingsSnapshot(settings)
 
   if (!hasChromeApi('storage')) {
     localStorage.setItem(settingsStorageKey(area), JSON.stringify(snapshot))
@@ -233,6 +233,13 @@ export function createSettingsSnapshot(settings: StarPageSettings): StarPageSett
     compactMode: settings.compactMode,
     motionEnabled: settings.motionEnabled,
   }
+}
+
+function createSyncedSettingsSnapshot(
+  settings: StarPageSettings,
+): Omit<StarPageSettings, 'visibleFolderIds'> {
+  const { visibleFolderIds: _visibleFolderIds, ...snapshot } = createSettingsSnapshot(settings)
+  return snapshot
 }
 
 export async function searchWithDefaultEngine(text: string): Promise<'chrome' | 'prototype'> {

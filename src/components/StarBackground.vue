@@ -1,28 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getBackgroundMotionProfile } from '../backgrounds'
+import { createStarField, projectStar, random, smoothNoise, type Star } from '../backgrounds/starField'
 import { useBackground } from '../composables/useBackground'
-
-interface Star {
-  x: number
-  y: number
-  radius: number
-  opacity: number
-  speed: number
-  phase: number
-  depth: number
-}
-
-interface DustParticle {
-  x: number
-  y: number
-  radius: number
-  opacity: number
-  speed: number
-  phase: number
-  depth: number
-  hue: number
-}
 
 interface Meteor {
   startX: number
@@ -37,224 +17,175 @@ interface Meteor {
 const canvas = ref<HTMLCanvasElement>()
 const { currentBackground, shouldAnimate } = useBackground()
 const backgroundClass = computed(() => currentBackground.value?.className)
+const pageVisible = ref(!document.hidden)
+const animationActive = computed(() => shouldAnimate.value && pageVisible.value)
 
 let context: CanvasRenderingContext2D | null = null
 let animationFrame = 0
 let stars: Star[] = []
-let dustParticles: DustParticle[] = []
 let meteors: Meteor[] = []
 let width = 0
 let height = 0
-let pixelRatio = 1
 let pointerX = 0
 let pointerY = 0
 let targetPointerX = 0
 let targetPointerY = 0
+let activeTime = 0
+let previousFrame: number | null = null
 let lastMeteorAt = 0
-
-function createStars() {
-  const count = Math.min(230, Math.max(100, Math.round((width * height) / 9200)))
-  stars = Array.from({ length: count }, (_, index) => {
-    const seed = Math.sin((index + 1) * 78.233) * 43758.5453
-    const secondSeed = Math.sin((index + 11) * 31.117) * 17321.173
-    const randomA = seed - Math.floor(seed)
-    const randomB = secondSeed - Math.floor(secondSeed)
-    return {
-      x: randomA * width,
-      y: randomB * height,
-      radius: 0.45 + ((index * 17) % 100) / 76,
-      opacity: 0.22 + ((index * 29) % 70) / 100,
-      speed: 0.45 + ((index * 13) % 70) / 70,
-      phase: randomB * Math.PI * 2,
-      depth: 0.2 + ((index * 7) % 80) / 100,
-    }
-  })
-
-  const dustCount = Math.min(28, Math.max(16, Math.round((width * height) / 68000)))
-  dustParticles = Array.from({ length: dustCount }, (_, index) => {
-    const seed = Math.sin((index + 31) * 63.913) * 29754.113
-    const secondSeed = Math.sin((index + 73) * 22.731) * 19831.337
-    const randomA = seed - Math.floor(seed)
-    const randomB = secondSeed - Math.floor(secondSeed)
-    return {
-      x: randomA * width,
-      y: randomB * height,
-      radius: 1.3 + ((index * 11) % 25) / 10,
-      opacity: 0.1 + ((index * 17) % 18) / 100,
-      speed: 0.5 + ((index * 19) % 60) / 55,
-      phase: randomA * Math.PI * 2,
-      depth: 0.55 + ((index * 7) % 40) / 100,
-      hue: index % 3 === 0 ? 272 : index % 3 === 1 ? 220 : 198,
-    }
-  })
-}
 
 function resizeCanvas() {
   if (!canvas.value) return
   width = window.innerWidth
   height = window.innerHeight
-  pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5)
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
   canvas.value.width = Math.round(width * pixelRatio)
   canvas.value.height = Math.round(height * pixelRatio)
   canvas.value.style.width = `${width}px`
   canvas.value.style.height = `${height}px`
   context = canvas.value.getContext('2d')
   context?.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
-  createStars()
-  draw(performance.now())
+  stars = createStarField(width, height, getBackgroundMotionProfile(currentBackground.value?.id))
+  draw()
 }
 
-function drawStarField(time: number) {
+function drawStarField() {
   if (!context) return
-  const animated = shouldAnimate.value && !document.hidden
-  pointerX += (targetPointerX - pointerX) * 0.04
-  pointerY += (targetPointerY - pointerY) * 0.04
-
-  const seconds = time / 1000
+  const seconds = activeTime / 1000
   const profile = getBackgroundMotionProfile(currentBackground.value?.id)
-
-  dustParticles.forEach((particle) => {
-    const waveX = animated ? Math.sin(seconds * 0.48 + particle.phase) * 22 * particle.depth : 0
-    const waveY = animated ? Math.cos(seconds * 0.34 + particle.phase) * 14 * particle.depth : 0
-    const driftX = animated ? seconds * profile.dustSpeed * particle.speed * profile.direction : 0
-    const driftY = animated ? seconds * profile.dustSpeed * particle.speed * profile.verticalRatio : 0
-    const x = (particle.x + driftX + waveX + pointerX * particle.depth * 1.4 + width * 3) % width
-    const y = (particle.y + driftY + waveY + pointerY * particle.depth * 1.4 + height * 3) % height
-    const pulse = animated ? Math.sin(seconds * 1.45 + particle.phase) * 0.07 : 0
-    const opacity = Math.max(0.06, particle.opacity + pulse)
-    const gradient = context!.createRadialGradient(x, y, 0, x, y, particle.radius * 3.8)
-    gradient.addColorStop(0, `hsla(${particle.hue}, 100%, 91%, ${opacity})`)
-    gradient.addColorStop(0.24, `hsla(${particle.hue}, 96%, 76%, ${opacity * 0.58})`)
-    gradient.addColorStop(1, `hsla(${particle.hue}, 90%, 68%, 0)`)
-    context!.beginPath()
-    context!.fillStyle = gradient
-    context!.arc(x, y, particle.radius * 3.8, 0, Math.PI * 2)
-    context!.fill()
-  })
 
   stars.forEach((star) => {
-    const twinkle = animated
-      ? Math.sin(seconds * (profile.twinkleSpeed + star.speed * 1.15) + star.phase) * profile.twinkleAmount
-      : 0
-    const driftX = animated ? seconds * profile.starSpeed * star.speed * profile.direction : 0
-    const driftY = animated ? seconds * profile.starSpeed * star.speed * profile.verticalRatio : 0
-    const orbitX = animated ? Math.sin(seconds * 0.28 + star.phase) * 8 * star.depth : 0
-    const orbitY = animated ? Math.cos(seconds * 0.22 + star.phase) * 5 * star.depth : 0
-    const x = (star.x + driftX + orbitX + pointerX * star.depth + width * 2) % width
-    const y = (star.y + driftY + orbitY + pointerY * star.depth + height * 2) % height
-    const opacity = Math.max(0.12, Math.min(0.96, star.opacity + twinkle))
+    const position = projectStar(star, seconds, width, height, profile)
+    const x = position.x + pointerX * star.depth
+    const y = position.y + pointerY * star.depth
+    if (x < -16 || y < -16 || x > width + 16 || y > height + 16) return
 
-    if (animated && star.radius > 1.12) {
-      const trailLength = profile.starSpeed * star.speed * (0.24 + star.depth * 0.22)
+    const time = seconds * profile.twinkleSpeed * star.twinkleRate + star.phase
+    const shimmer = smoothNoise(time, star.phase * 37) * 0.75
+      + smoothNoise(time * 2.7, star.phase * 61) * 0.25
+    const strength = Math.min(star.opacity * profile.twinkleAmount * star.twinkleStrength, 1 - star.opacity)
+    const opacity = star.opacity + shimmer * strength
+
+    if (profile.distribution === 'orbit' && star.radius > 0.65) {
+      const centerX = width * 0.72 + pointerX * star.depth
+      const centerY = height * 0.24 + pointerY * star.depth
+      const radius = Math.hypot(x - centerX, y - centerY)
+      const angle = Math.atan2(y - centerY, x - centerX)
       context!.beginPath()
-      context!.strokeStyle = `rgba(151, 179, 255, ${opacity * 0.18})`
-      context!.lineWidth = Math.max(0.5, star.radius * 0.42)
-      context!.moveTo(x - trailLength * profile.direction, y - trailLength * profile.verticalRatio)
-      context!.lineTo(x, y)
+      context!.strokeStyle = `rgba(${star.color}, ${opacity * 0.32})`
+      context!.lineWidth = star.radius * 0.75
+      context!.arc(centerX, centerY, radius, angle - 0.045, angle)
       context!.stroke()
+    }
+
+    // 只给少量亮星加紧贴星点的散射光，不使用十字星芒或大光圈。
+    if (star.radius > 1.2) {
+      const glowRadius = star.radius * 3
+      const glow = context!.createRadialGradient(x, y, 0, x, y, glowRadius)
+      glow.addColorStop(0, `rgba(${star.color}, ${opacity * 0.25})`)
+      glow.addColorStop(0.35, `rgba(${star.color}, ${opacity * 0.06})`)
+      glow.addColorStop(1, `rgba(${star.color}, 0)`)
+      context!.beginPath()
+      context!.fillStyle = glow
+      context!.arc(x, y, glowRadius, 0, Math.PI * 2)
+      context!.fill()
     }
 
     context!.beginPath()
-    context!.fillStyle = `rgba(220, 230, 255, ${opacity})`
+    context!.fillStyle = `rgba(${star.color}, ${opacity})`
     context!.arc(x, y, star.radius, 0, Math.PI * 2)
     context!.fill()
-
-    if (star.radius > 1.35) {
-      context!.beginPath()
-      context!.strokeStyle = `rgba(176, 199, 255, ${opacity * 0.28})`
-      context!.moveTo(x - star.radius * 3.6, y)
-      context!.lineTo(x + star.radius * 3.6, y)
-      context!.moveTo(x, y - star.radius * 3.6)
-      context!.lineTo(x, y + star.radius * 3.6)
-      context!.stroke()
-    }
   })
 }
 
-function drawMeteors(time: number) {
-  if (!context || !shouldAnimate.value) return
-
+function drawMeteors() {
+  if (!context) return
   const kind = currentBackground.value?.kind
   const profile = getBackgroundMotionProfile(currentBackground.value?.id)
-  const maxMeteors = kind === 'canvas-meteor' ? 3 : 2
 
-  if (time - lastMeteorAt > profile.meteorInterval && meteors.length < maxMeteors) {
-    const seed = (Math.sin(time * 0.013) + 1) / 2
+  if (
+    animationActive.value
+    && profile.meteorInterval > 0
+    && activeTime - lastMeteorAt > profile.meteorInterval
+    && !meteors.length
+  ) {
+    const seed = random(lastMeteorAt + 17)
     meteors.push({
-      startX: width * (0.68 + seed * 0.24),
-      startY: height * (0.04 + seed * 0.18),
-      length: kind === 'canvas-meteor' ? 185 : kind === 'ambient' ? 92 : 128,
+      startX: width * (0.55 + seed * 0.4),
+      startY: height * (0.04 + random(lastMeteorAt + 31) * 0.22),
+      length: kind === 'canvas-meteor' ? 130 : kind === 'ambient' ? 65 : 90,
       travel: Math.max(width * 0.46, 560),
       duration: kind === 'canvas-meteor' ? 1050 : kind === 'ambient' ? 1550 : 1300,
-      createdAt: time,
-      opacity: kind === 'canvas-meteor' ? 0.94 : kind === 'ambient' ? 0.42 : 0.65,
+      createdAt: activeTime,
+      opacity: kind === 'canvas-meteor' ? 0.5 : kind === 'ambient' ? 0.18 : 0.28,
     })
-    lastMeteorAt = time
+    lastMeteorAt = activeTime
   }
 
-  meteors = meteors.filter((meteor) => time - meteor.createdAt < meteor.duration)
+  meteors = meteors.filter((meteor) => activeTime - meteor.createdAt < meteor.duration)
   meteors.forEach((meteor) => {
-    const progress = Math.min(1, (time - meteor.createdAt) / meteor.duration)
-    const eased = 1 - Math.pow(1 - progress, 2)
-    const x = meteor.startX - meteor.travel * eased
-    const y = meteor.startY + meteor.travel * 0.5 * eased
+    const progress = (activeTime - meteor.createdAt) / meteor.duration
+    const x = meteor.startX - meteor.travel * progress
+    const y = meteor.startY + meteor.travel * 0.5 * progress
     const opacity = Math.sin(progress * Math.PI) * meteor.opacity
-    const gradient = context!.createLinearGradient(
-      x,
-      y,
-      x + meteor.length,
-      y - meteor.length * 0.54,
-    )
+    const gradient = context!.createLinearGradient(x, y, x + meteor.length, y - meteor.length * 0.5)
     gradient.addColorStop(0, `rgba(235, 242, 255, ${opacity})`)
     gradient.addColorStop(1, 'rgba(145, 175, 255, 0)')
     context!.beginPath()
     context!.strokeStyle = gradient
-    context!.lineWidth = kind === 'canvas-meteor' ? 1.8 : 1.35
+    context!.lineWidth = kind === 'canvas-meteor' ? 1 : 0.7
     context!.moveTo(x, y)
-    context!.lineTo(x + meteor.length, y - meteor.length * 0.54)
+    context!.lineTo(x + meteor.length, y - meteor.length * 0.5)
     context!.stroke()
   })
 }
 
-function draw(time: number) {
+function draw() {
   if (!context) return
   context.clearRect(0, 0, width, height)
-  drawStarField(time)
-  drawMeteors(time)
+  drawStarField()
+  drawMeteors()
 }
 
 function animate(time: number) {
-  draw(time)
-  if (shouldAnimate.value && !document.hidden) {
-    animationFrame = requestAnimationFrame(animate)
-  }
+  if (!animationActive.value) return
+  const delta = previousFrame === null ? 0 : Math.min(time - previousFrame, 50)
+  previousFrame = time
+  activeTime += delta
+  const follow = 1 - Math.exp(-delta / 350)
+  pointerX += (targetPointerX - pointerX) * follow
+  pointerY += (targetPointerY - pointerY) * follow
+  draw()
+  animationFrame = requestAnimationFrame(animate)
 }
 
 function restartAnimation() {
   cancelAnimationFrame(animationFrame)
-  draw(performance.now())
-  if (shouldAnimate.value && !document.hidden) animationFrame = requestAnimationFrame(animate)
+  previousFrame = null
+  draw()
+  if (animationActive.value) animationFrame = requestAnimationFrame(animate)
 }
 
 function handlePointer(event: PointerEvent) {
-  targetPointerX = (event.clientX / Math.max(width, 1) - 0.5) * -34
-  targetPointerY = (event.clientY / Math.max(height, 1) - 0.5) * -24
+  if (!animationActive.value || event.pointerType === 'touch') return
+  targetPointerX = (event.clientX / Math.max(width, 1) - 0.5) * -18
+  targetPointerY = (event.clientY / Math.max(height, 1) - 0.5) * -12
 }
 
 function handleVisibility() {
-  restartAnimation()
+  pageVisible.value = !document.hidden
 }
 
-watch([() => currentBackground.value?.id, shouldAnimate], async () => {
-  await nextTick()
+watch(animationActive, restartAnimation)
+watch(() => currentBackground.value?.id, () => {
+  activeTime = 0
   meteors = []
-  lastMeteorAt = performance.now() - getBackgroundMotionProfile(currentBackground.value?.id).meteorInterval + 900
-  resizeCanvas()
+  lastMeteorAt = 0
+  stars = createStarField(width, height, getBackgroundMotionProfile(currentBackground.value?.id))
   restartAnimation()
 })
 
 onMounted(() => {
-  lastMeteorAt = performance.now() - getBackgroundMotionProfile(currentBackground.value?.id).meteorInterval + 900
   resizeCanvas()
   restartAnimation()
   window.addEventListener('resize', resizeCanvas, { passive: true })
@@ -271,8 +202,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="star-background" :class="backgroundClass" aria-hidden="true">
-    <canvas ref="canvas" class="star-background__canvas" :data-animated="shouldAnimate"></canvas>
+  <div class="star-background" :class="backgroundClass" :data-animated="animationActive" aria-hidden="true">
+    <canvas ref="canvas" class="star-background__canvas" :data-animated="animationActive"></canvas>
     <div class="star-background__nebula"></div>
     <div class="star-background__vignette"></div>
     <div class="star-background__grain"></div>

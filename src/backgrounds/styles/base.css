@@ -3,6 +3,7 @@
   z-index: -2;
   inset: 0;
   overflow: hidden;
+  pointer-events: none;
   background-color: var(--night-950);
   transition: background 700ms ease;
 }
@@ -21,62 +22,49 @@
 }
 
 .star-background__nebula {
-  opacity: 0.72;
-  filter: blur(15px);
-  transform: scale(1.12);
+  opacity: 0.48;
+  filter: blur(28px);
+  transform: scale(1.08);
   transform-origin: 50% 50%;
-  will-change: transform, opacity;
+  animation: nebula-breathe 48s ease-in-out infinite alternate paused;
 }
 
 .star-background__vignette {
   background:
-    radial-gradient(circle at 50% 35%, transparent 0, rgba(3, 5, 18, 0.08) 46%, rgba(2, 3, 13, 0.62) 100%),
-    linear-gradient(to bottom, rgba(2, 4, 16, 0.04), rgba(2, 3, 14, 0.4));
+    radial-gradient(ellipse at 50% 30%, transparent 20%, rgba(1, 3, 8, 0.06) 64%, rgba(1, 3, 8, 0.35) 100%),
+    linear-gradient(to bottom, transparent 35%, rgba(1, 3, 8, 0.16));
 }
 
 .star-background__grain {
-  opacity: 0.16;
+  opacity: 0.035;
   background-image:
     radial-gradient(circle at 18% 26%, rgba(255, 255, 255, 0.42) 0 0.5px, transparent 0.7px),
     radial-gradient(circle at 72% 69%, rgba(255, 255, 255, 0.28) 0 0.5px, transparent 0.7px);
   background-size: 7px 7px, 11px 11px;
   mix-blend-mode: soft-light;
-  will-change: background-position, opacity;
 }
 
-.app-shell--motion .star-background__nebula {
-  animation: nebula-breathe 8s ease-in-out infinite alternate;
-}
-
-.app-shell--motion .star-background__grain {
-  animation: star-layer-drift 11s linear infinite;
+.star-background[data-animated='true'] .star-background__nebula {
+  animation-play-state: running;
 }
 
 @keyframes nebula-breathe {
-  0% {
-    opacity: 0.52;
-    transform: scale(1.08) translate3d(-3.2%, 1.4%, 0) rotate(-0.8deg);
+  from {
+    opacity: 0.4;
+    transform: scale(1.08) translate3d(-0.5%, 0, 0);
   }
-  55% {
-    opacity: 0.9;
-    transform: scale(1.18) translate3d(3.5%, -2.2%, 0) rotate(0.9deg);
-  }
-  100% {
-    opacity: 0.64;
-    transform: scale(1.12) translate3d(0.8%, 2.6%, 0) rotate(-0.35deg);
+  to {
+    opacity: 0.58;
+    transform: scale(1.1) translate3d(0.5%, -0.5%, 0);
   }
 }
 
-@keyframes star-layer-drift {
-  from {
-    background-position: 0 0, 0 0;
-    opacity: 0.12;
+@media (prefers-reduced-motion: reduce) {
+  .star-background {
+    transition: none;
   }
-  50% {
-    opacity: 0.22;
-  }
-  to {
-    background-position: 72px 46px, -58px 52px;
-    opacity: 0.14;
+
+  .star-background__nebula {
+    animation: none;
   }
 }
